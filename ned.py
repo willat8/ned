@@ -7,8 +7,8 @@ NED_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/datasearch?search_type
 
 class Source:
   """Instances of this class represent extragalactic objects"""
-  def __init__(self, RA, dec, ned_name, z, RM, RM_err):
-    [setattr(self, key, locals().get(key)) for key in locals().keys()] # set instance vars
+  def __init__(self, data):
+    [setattr(self, *entry) for entry in data] # set instance vars
 
 def get_votable(source):
   """Fetches and returns NED data for a source, in a astropy votable"""
@@ -28,7 +28,7 @@ _test_source_data_list = [
 "197.16317,-9.84211,PKS 1306-09,0.46685,-27.3,2.0"]
 
 _sources = []
-[_sources.append(Source(*_test_source_data.lower().replace(" ","+").split(","))) for _test_source_data in _test_source_data_list]
+[_sources.append(Source(zip(("RA","dec","ned_name","z","RM","RM_err"), _test_source_data.lower().replace(" ","+").split(",")))) for _test_source_data in _test_source_data_list]
 
 # let's see if it works
 for _source in _sources:
