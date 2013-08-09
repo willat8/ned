@@ -1,1 +1,6 @@
 Revision control for NED python scripting
+
+Requirements:
+  + Python 2 (http://www.python.org/download/)
+  + Astropy (http://www.astropy.org/)
+  + Internet access
