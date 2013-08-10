@@ -26,8 +26,8 @@ def get_ned_sed_votable(source):
 
 def store_ned_position_data(source, votable):
   """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them"""
-  source.lat = votable.array["pos_ra_equ_J2000_d"].data.tolist()
-  source.lon = votable.array["pos_dec_equ_J2000_d"].data.tolist()
+  source.lat = votable.array["pos_ra_equ_J2000_d"].data.item()
+  source.lon = votable.array["pos_dec_equ_J2000_d"].data.item()
 
 def store_ned_sed_data(source, votable):
   """Picks out the frequency and flux data and records them as lists"""
@@ -47,11 +47,12 @@ _sources = []
 # let's see if it works
 for _source in _sources:
   store_ned_position_data(_source, get_ned_position_votable(_source))
-  store_ned_sed_data(_source, get_ned_sed_votable(_source))
-  print "Name: ", _source.ned_name.upper()
-  print "Latitude (J200.0 deg): ", _source.lat
-  print "Longitude (J200.0 deg): ", _source.lon
-  print "Frequency: ", _source.freq
-  print "Flux: ", zip(_source.flux, _source.uncertainty, _source.units)
-  print
   time.sleep(1)
+  store_ned_sed_data(_source, get_ned_sed_votable(_source))
+  time.sleep(1)
+  print "NED Name:", _source.ned_name.upper()
+  print "Latitude (J200.0 deg):", _source.lat
+  print "Longitude (J200.0 deg):", _source.lon
+  print "Frequency:", _source.freq
+  print "Flux:", zip(_source.flux, _source.uncertainty, _source.units)
+  print
