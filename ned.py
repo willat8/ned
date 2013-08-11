@@ -1,6 +1,6 @@
 """This module provides tools for querying the NASA\IPAC Extragalactic Database (NED)"""
 
-import urllib, astropy.io.votable, time
+import urllib, astropy.io.votable, time, warnings
 
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
@@ -17,12 +17,16 @@ class Source:
 def get_ned_position_votable(source):
   """Fetches and returns NED position data for a source, in a astropy votable"""
   xml_file = urllib.urlopen(NED_POSITION_SEARCH_PATH % source.ned_name) #grab xml file-like-object from ned
-  return astropy.io.votable.parse_single_table(xml_file) #parse xml to astropy votable
+  with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    return astropy.io.votable.parse_single_table(xml_file) #parse xml to astropy votable
 
 def get_ned_sed_votable(source):
   """Fetches and returns NED spectral energy distribution (SED) data for a source, in a astropy votable"""
   xml_file = urllib.urlopen(NED_SED_SEARCH_PATH % source.ned_name) #grab xml file-like-object from ned
-  return astropy.io.votable.parse_single_table(xml_file) #parse xml to astropy votable
+  with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    return astropy.io.votable.parse_single_table(xml_file) #parse xml to astropy votable
 
 def store_ned_position_data(source, votable):
   """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them"""
