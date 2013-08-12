@@ -63,14 +63,9 @@ def store_ned_position_data(source, votable):
 
 def store_ned_sed_data(source, votable):
   """Picks out the frequency and flux data and records them as lists"""
-  try: source.freq = votable.array["Frequency"].data.tolist() #if no results found will error
-  except: pass
-  try: source.flux = votable.array["NED Photometry Measurement"].data.tolist() #if no results found will error
-  except: pass
-  try: source.uncertainty = votable.array["NED Uncertainty"].data.tolist() #if no results found will error
-  except: pass
-  try: source.units = votable.array["NED Units"].data.tolist() #if no results found will error
-  except: pass
+  for key, name in [("freq", "Frequency"), ("flux", "NED Photometry Measurement"), ("uncertainty", "NED Uncertainty"), ("units", "NED Units")]:
+    try: setattr(source, key, votable.array[name].data.tolist()) #if no results found will error
+    except: continue
 
 def store_wise_data(source, votable):
   """Stores all the WISE data in a tuple"""
