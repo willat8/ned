@@ -4,3 +4,7 @@ Requirements:
   + Python 2 (http://www.python.org/download/)
   + Astropy (http://www.astropy.org/)
   + Internet access
+
+Usage:
+  Examples sources are hard-coded into the script for the time being, so simply run in a terminal:
+   $ python ned.py
