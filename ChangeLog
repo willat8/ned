@@ -5,3 +5,4 @@ v1.0 (9 Aug 2013): Initial release. Implements SED frequency-flux data fetching 
 		     + WISE/2MASS data
 		     + dat file formatting
 		     + Results filtering
+                     + Value rounding
