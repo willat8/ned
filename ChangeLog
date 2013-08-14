@@ -1,8 +1,16 @@
-v1.0 (9 Aug 2013): Initial release. Implements SED frequency-flux data fetching from NED
-                   with uncertainties and units. Test source data hard-coded into script.
-		   To do:
-		     + Error handling
-		     + WISE/2MASS data
-		     + dat file formatting
-		     + Results filtering
-		     + Value rounding
+v1.1 (15 Aug 2013): New approach to data storage. Outputs in .dat-ready format.
+		    Supports data fetching from NED, WISE and 2MASS, but parsing and output of NED and WISE data only.
+		    Basic error-handling implemented (ie descriptive custom exceptions).
+		    To do:
+		      + Results flags
+		      + 2MASS parsing and output
+		      + GALEX support
+		      + Results filtering
+
+v1.0 (9 Aug 2013) : Initial release. Implements SED frequency-flux data fetching from NED
+		    with uncertainties and units. Test source data hard-coded into script.
+		    To do:
+		      + Error-handling
+		      + WISE/2MASS data
+		      + dat file formatting
+		      + Results filtering
