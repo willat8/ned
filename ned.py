@@ -95,7 +95,7 @@ class Source:
     """Picks out the frequency vs flux data and records them as data points"""
     print self.name
     try: # see if 2mass data is included
-      [int(self.wise.array[name].data.item()) for name in ("j_m_2mass", "h_m_2mass", "k_m_2mass")] # will error if no 2mass data
+      [int(self.wise.array[name].data.item()) for name in ["%s_m_2mass" % letter for letter in ("j", "h", "k")]]  # will error if no 2mass data
       self.twomass = self.wise # if gets to here then 2mass is included in wise
     except: pass # will try to fetch 2mass later
     try:
