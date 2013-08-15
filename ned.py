@@ -94,17 +94,25 @@ class Source:
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points"""
     print self.name
+    try: # see if 2mass data is included
+      [int(self.wise.array[name].data.item()) for name in ("j_m_2mass", "h_m_2mass", "k_m_2mass")] # will error if no 2mass data
+      self.twomass = self.wise # if gets to here then 2mass is included in wise
+    except: pass # will try to fetch 2mass later
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "WISE", "flag": 'a', "lat": wise_lat, "lon": wise_lon, "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip([8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13], map(float.__mul__, [306.682, 170.663, 29.045, 8.284], [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)]))]
-    except: raise Exception("Can't find raw WISE data!")
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "WISE", "flag": 'a', "lat": wise_lat, "lon": wise_lon, "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)]))]
+    except:
+      print "Can't find raw WISE data! (%s)" % self.name
 
   def parse_twomass(self, index):
     """Picks out the frequency vs flux data and records them as data points"""
     try:
-      pass
-    except: raise Exception("Can't find raw 2MASS data!")
+      twomass_lat = float(self.twomass.array["ra"].data.item())
+      twomass_lon = float(self.twomass.array["dec"].data.item())
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "flag": 'a', "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
+    except:
+      print "Can't find raw 2MASS data! (%s)" % self.name
 
 def get_votable(url):
   """Fetches from the web and returns data for a source, in an astropy votable"""
@@ -143,7 +151,7 @@ print "ANALYSING WISE DATA..."
 [_source.parse_wise(index+1) for index,_source in enumerate(_sources)] # parse and store wise data (including any 2mass data)
 print
 print "DOWNLOADING ANY MISSING 2MASS DATA..."
-[setattr(_source, "twomass", get_votable(TWOMASS_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources if _source] # fetch 2mass data if missing
+[setattr(_source, "twomass", get_votable(TWOMASS_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources if not _source.twomass] # fetch 2mass data if missing
 print "ANALYSING 2MASS DATA..."
 [_source.parse_twomass(index+1) for index,_source in enumerate(_sources)] # parse and store 2mass data
 

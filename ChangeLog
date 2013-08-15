@@ -1,3 +1,9 @@
+v1.2 (15 Aug 2013): Implemented 2MASS parsing and output. Runtime output is more descriptive.
+		    To do:
+		      + Results flags
+		      + GALEX support
+		      + Results filtering
+
 v1.1 (15 Aug 2013): New approach to data storage. Outputs in .dat-ready format.
 		    Supports data fetching from NED, WISE and 2MASS, but parsing and output of NED and WISE data only.
 		    Basic error-handling implemented (ie descriptive custom exceptions).
