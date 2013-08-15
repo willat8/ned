@@ -68,6 +68,7 @@ class Source:
     try:
       data = dict(zip(("RA","dec","ned_name","z","RM","RM_err"), self.polarisation.split(",")))
       self.name = data["ned_name"]
+      print self.name
       self.z = float(data["z"])
       self.RM = data["RM"]
       self.RM_err = data["RM_err"]
@@ -77,6 +78,7 @@ class Source:
 
   def parse_ned_position(self):
     """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them"""
+    print self.name
     try:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
@@ -84,12 +86,14 @@ class Source:
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points"""
+    print self.name
     try:
       [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "flag": 'a', "lat": self.ned_lat, "lon": self.ned_lon, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
     except: raise Exception("Can't find raw NED SED data!")
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points"""
+    print self.name
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
@@ -121,18 +125,26 @@ _test_polarisation_data = [
 "197.16317,-9.84211,PKS 1306-09,0.46685,-27.3,2.0"
 ]
 
-print "DOWNLOADING..."
+print "ANALYSING POLARISATION DATA..."
 _sources = [Source(entry) for entry in _test_polarisation_data]
+print
+print "DOWNLOADING NED DATA..."
 [setattr(_source, "ned_position", get_votable(NED_POSITION_SEARCH_PATH % _source.name.replace(" ","+"))) for _source in _sources] # fetch ned position data
 [setattr(_source, "ned_sed", get_votable(NED_SED_SEARCH_PATH % _source.name.replace(" ","+"))) for _source in _sources] # fetch ned sed data
-[_source.parse_ned_position() for _source in _sources] # parse and store ned position data
-[setattr(_source, "wise", get_votable(WISE_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources] # fetch wise data
-[setattr(_source, "twomass", get_votable(TWOMASS_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources] # fetch 2mass data
-
 print
-print "ANALYSING..."
+print "ANALYSING NED POSITION DATA..."
+[_source.parse_ned_position() for _source in _sources] # parse and store ned position data
+print "ANALYSING NED SED DATA..."
 [_source.parse_ned_sed(index+1) for index, _source in enumerate(_sources)] # parse and store ned sed data
-[_source.parse_wise(index+1) for index,_source in enumerate(_sources)] # parse and store wise data
+print
+print "DOWNLOADING WISE DATA..."
+[setattr(_source, "wise", get_votable(WISE_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources] # fetch wise data
+print "ANALYSING WISE DATA..."
+[_source.parse_wise(index+1) for index,_source in enumerate(_sources)] # parse and store wise data (including any 2mass data)
+print
+print "DOWNLOADING ANY MISSING 2MASS DATA..."
+[setattr(_source, "twomass", get_votable(TWOMASS_SEARCH_PATH % {"lat": _source.ned_lat, "lon": _source.ned_lon})) for _source in _sources if _source] # fetch 2mass data if missing
+print "ANALYSING 2MASS DATA..."
 [_source.parse_twomass(index+1) for index,_source in enumerate(_sources)] # parse and store 2mass data
 
 # let's see if it works
