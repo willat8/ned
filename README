@@ -7,6 +7,9 @@ Requirements:
   + BeautifulSoup (http://www.crummy.com/software/BeautifulSoup/)
   + Internet access
 
+If you have pip installed then run:
+ $ sudo pip install numpy astropy mechanize beautifulsoup4
+
 Usage:
   Examples sources are hard-coded into the script for the time being, so simply run in a terminal:
    $ chmod +x ned.py
