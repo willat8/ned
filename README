@@ -9,6 +9,7 @@ Requirements:
 
 If you have pip installed then run:
  $ sudo pip install numpy astropy mechanize beautifulsoup4
+to install all of the dependencies.
 
 Usage:
   Examples sources are hard-coded into the script for the time being, so simply run in a terminal:
