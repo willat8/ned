@@ -1,6 +1,5 @@
 v1.2 (15 Aug 2013): Implemented 2MASS parsing and output. Runtime output is more descriptive.
 		    To do:
-		      + Results flags
 		      + GALEX support
 		      + Results filtering
 
