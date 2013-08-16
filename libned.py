@@ -1,7 +1,7 @@
 """This module provides tools for querying the NASA\IPAC Extragalactic Database (NED)
    and the Wide-field Infrared Survey Explorer (WISE) database."""
 
-import urllib, astropy.io.votable, time, warnings, math
+import urllib, astropy.io.votable, time, warnings, math, mechanize, BeautifulSoup, re
 
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
