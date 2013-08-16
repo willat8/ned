@@ -7,4 +7,5 @@ Requirements:
 
 Usage:
   Examples sources are hard-coded into the script for the time being, so simply run in a terminal:
-   $ python ned.py
+   $ chmod +x ned.py
+   $ ./ned.py
