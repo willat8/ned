@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-import libned
+import libned, urllib
 
 # temporary test data
 _test_polarisation_data = [
@@ -12,8 +12,8 @@ print "ANALYSING POLARISATION DATA..."
 _sources = [libned.Source(entry) for entry in _test_polarisation_data]
 print
 print "DOWNLOADING NED DATA..."
-[setattr(_source, "ned_position", libned.get_votable(libned.NED_POSITION_SEARCH_PATH % _source.name.replace(" ","+"))) for _source in _sources] # fetch ned position data
-[setattr(_source, "ned_sed", libned.get_votable(libned.NED_SED_SEARCH_PATH % _source.name.replace(" ","+"))) for _source in _sources] # fetch ned sed data
+[setattr(_source, "ned_position", libned.get_votable(libned.NED_POSITION_SEARCH_PATH % urllib.quote_plus(_source.name))) for _source in _sources] # fetch ned position data
+[setattr(_source, "ned_sed", libned.get_votable(libned.NED_SED_SEARCH_PATH % urllib.quote_plus(_source.name))) for _source in _sources] # fetch ned sed data
 print
 print "ANALYSING NED POSITION DATA..."
 [_source.parse_ned_position() for _source in _sources] # parse and store ned position data
