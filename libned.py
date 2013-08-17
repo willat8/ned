@@ -63,6 +63,25 @@ class Source:
   def __repr__(self):
     return "\n".join(map(repr, self.points))
 
+  def get_ned_position_votable(self):
+    """Builds the correct URL and fetches the source's NED position votable"""
+    return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.name))
+
+  def get_ned_sed_votable(self):
+    """Builds the correct URL and fetches the source's NED SED votable"""
+    return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.name))
+
+  def get_wise_votable(self):
+    """Builds the correct URL and fetches the source's WISE votable"""
+    return get_votable(WISE_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+
+  def get_twomass_votable(self):
+    """Builds the correct URL and fetches the source's 2MASS votable"""
+    return get_votable(TWOMASS_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+
+  def get_galex_votable(self):
+    pass
+
   def parse_polarisation(self):
     """Picks out the redshift and rotation measure from the polarisation data and records them"""
     try:
