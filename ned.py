@@ -34,3 +34,4 @@ print "ANALYSING 2MASS DATA..."
 print
 print "RESULTS"
 for _source in _sources: print _source
+for _source in _sources: print _source.get_galex_votable().array
