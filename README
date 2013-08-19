@@ -19,10 +19,8 @@ A sample data.dat is provided.
 
 Note that running the script without any file input:
  $ ./ned.py
-will wait for manual data input. To indicate the end of a line of entry hit Return.
-To validate the provided input then press Ctrl+D. Otherwise provide more lines of input and
-then press Ctrl+D to validate them all. After validation press Ctrl+D again to continue
-or provide more lines of input to validate more sources.
+will wait for manual data input. To indicate the end of a line of entry hit Return and then Ctrl+D.
+To indicate the end of input hit Ctrl+D again.
 
 If an output filename is specified:
  $ ./ned.py --file out.dat pol.dat
