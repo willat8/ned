@@ -20,21 +20,21 @@ class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
   def __init__(self, data):
     # initialise default values with correct types for output string
-    self.index = 0
+    self.index = -1
     self.name = None
-    self.z = 0.
-    self.num = 0
-    self.freq = 0.
-    self.flux = 0.
+    self.z = float("inf")
+    self.num = -1
+    self.freq = float("inf")
+    self.flux = float("inf")
     self.source = None # refers to the data source
     self.flag = 0
-    self.lat = 0.
-    self.lon = 0.
-    self.offset_from_ned = 0.
+    self.lat = float("inf")
+    self.lon = float("inf")
+    self.offset_from_ned = float("inf")
     self.extinction = 1. # default extinction value for all sources?
     self.RM = None
     self.RM_err = None
-    self.offset_from_pol = 0.
+    self.offset_from_pol = float("inf")
 
     [setattr(self, *entry) for entry in data.items()] # set proper values
 
@@ -51,16 +51,17 @@ class Source:
     self.ned_sed = None
     self.wise = None
     self.twomass = None
+    self.galex = None
 
     # common for all data points for this source
     self.name = None
-    self.ned_lat = 0.
-    self.ned_lon = 0.
-    self.z = 0.
+    self.ned_lat = float("inf")
+    self.ned_lon = float("inf")
+    self.z = float("inf")
     self.RM = None
     self.RM_err = None
-    self.pol_lat = 0.
-    self.pol_lon = 0.
+    self.pol_lat = float("inf")
+    self.pol_lon = float("inf")
 
     self.parse_polarisation()
 
@@ -161,6 +162,13 @@ class Source:
       [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "flag": 'a', "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
     except:
       print "Can't find raw 2MASS data! (%s)" % self.name
+
+  def parse_galex(self, index):
+    """Picks out the frequency vs flux data and records them as data points."""
+    try:
+      print [("RA: %.5f" % RA, "Dec: %.5f" % Dec) for RA, Dec in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()))]
+    except:
+      print "Can't find raw GALEX data! (%s)" % self.name
 
 def get_votable(url):
   """Fetches from the web and returns data for a source, in an astropy votable."""
