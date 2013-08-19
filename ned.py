@@ -29,9 +29,13 @@ print "DOWNLOADING ANY MISSING 2MASS DATA..."
 [setattr(_source, "twomass", _source.get_twomass_votable()) for _source in _sources if not _source.twomass] # fetch 2mass data if missing
 print "ANALYSING 2MASS DATA..."
 [_source.parse_twomass(index+1) for index,_source in enumerate(_sources)] # parse and store 2mass data
+print
+print "DOWNLOADING GALEX DATA..."
+[setattr(_source, "galex", _source.get_galex_votable()) for _source in _sources] # fetch galex data
+print "ANALYSING GALEX DATA..."
+[_source.parse_galex(index+1) for index,_source in enumerate(_sources)] # parse and store galex data
 
 # let's see if it works
 print
 print "RESULTS"
 for _source in _sources: print _source
-for _source in _sources: print _source.get_galex_votable().array
