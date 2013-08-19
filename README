@@ -22,7 +22,7 @@ Note that running the script without any file input:
 will wait for manual data input. To indicate the end of a line of entry hit Return and then Ctrl-D.
 
 If an output filename is specified:
- $ ./ned.py --file out.dat data.dat
+ $ ./ned.py --file out.dat pol.dat
 then results will be written to that file. Otherwise results are displayed.
 
 For more information refer to:

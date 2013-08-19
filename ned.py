@@ -9,7 +9,7 @@ in_file = vars(parser.parse_args())["input"] # a file-like object
 out_file = vars(parser.parse_args())["file"] # a string of a filename
 
 print "ANALYSING INPUT DATA..."
-_sources = [libned.Source(line) for line in in_file if libned.parse_entry(line)] # could be memoized
+_sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
 print
 print "DOWNLOADING NED DATA..."
 [setattr(_source, "ned_position", _source.get_ned_position_votable()) for _source in _sources] # fetch ned position data

@@ -3,6 +3,21 @@
 
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re
 
+POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
+  ^
+  (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
+  \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
+  \s+(?P<name>.+?) # ned name
+  \s+(?P<z>-?[0-9]+\.?[0-9]+) # z
+  \s+(?P<RM>-?[0-9]+\.?[0-9]+) # RM
+  \s+(?P<RM_err>-?[0-9]+\.?[0-9]+) # RM error
+  $
+  """, re.VERBOSE)
+NED_NAME_REGEXP = re.compile(""" # assumes no leading or trailing white space
+  ^
+  (?P<name>\S+\s+\S+\s*\S*) # ned name assuming conventions at http://cdsweb.u-strasbg.fr/vizier/Dic/iau-spec.htx
+  $
+  """, re.VERBOSE)
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
 NED_SED_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-datasearch?search_type=Photometry&of=xml_all\
@@ -44,9 +59,9 @@ class DataPoint:
 
 class Source:
   """Instances of this class represent extragalactic objects."""
-  def __init__(self, polarisation):
+  def __init__(self, line):
     self.points = []
-    self.polarisation = polarisation
+    self.line = line # raw input specifying source
     self.ned_position = None
     self.ned_sed = None
     self.wise = None
@@ -63,7 +78,11 @@ class Source:
     self.pol_lat = float("inf")
     self.pol_lon = float("inf")
 
-    self.parse_polarisation()
+    [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
+    self.pol_lat = float(self.pol_lat) # fix up types
+    self.pol_lon = float(self.pol_lon) # fix up types
+    self.z = float(self.z) # fix up types
+    print "  Recognised source", self.name
 
   def __repr__(self):
     return "\n".join(map(repr, self.points))
@@ -110,24 +129,11 @@ class Source:
       url = "http://galex.stsci.edu/GR6/" + re.compile("tmp\/galex_-[0-9]*\.xml").search(popup_js).group() # grabs the temp file name and constructs the url
 
       return get_votable(url)
-    except: raise Exception("Could not download or interpret data from %s. Are you connected to the Internet?" % GALEX_SEARCH_PAGE)
-
-  def parse_polarisation(self):
-    """Picks out the redshift and rotation measure from the polarisation data and records them."""
-    try:
-      data = dict(zip(("RA","dec","ned_name","z","RM","RM_err"), self.polarisation.split(",")))
-      self.name = data["ned_name"]
-      print self.name
-      self.z = float(data["z"])
-      self.RM = data["RM"]
-      self.RM_err = data["RM_err"]
-      self.pol_lat = float(data["RA"])
-      self.pol_lon = float(data["dec"])
-    except: raise Exception("Can't find raw polarisation data!")
+    except: raise Exception("Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % GALEX_SEARCH_PAGE)
 
   def parse_ned_position(self):
     """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them."""
-    print self.name
+    print " ", self.name
     try:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
@@ -135,14 +141,15 @@ class Source:
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
-    print self.name
+    print " ", self.name
     try:
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "flag": 'a', "lat": self.ned_lat, "lon": self.ned_lon, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
-    except: raise Exception("Can't find raw NED SED data!")
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "flag": 'a', "lat": self.ned_lat, "lon": self.ned_lon, "offset_from_ned": 0., "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
+    except:
+      print "  Can't find raw NED SED data! (%s)" % self.name
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
-    print self.name
+    print " ", self.name
     try: # see if 2mass data is included
       [int(self.wise.array[name].data.item()) for name in ["%s_m_2mass" % letter for letter in ("j", "h", "k")]]  # will error if no 2mass data
       self.twomass = self.wise # if gets to here then 2mass is included in wise
@@ -152,7 +159,7 @@ class Source:
       wise_lon = float(self.wise.array["dec"].data.item())
       [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "WISE", "flag": 'a', "lat": wise_lat, "lon": wise_lon, "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)]))]
     except:
-      print "Can't find raw WISE data! (%s)" % self.name
+      print "  Can't find raw WISE data! (%s)" % self.name
 
   def parse_twomass(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -161,18 +168,18 @@ class Source:
       twomass_lon = float(self.twomass.array["dec"].data.item())
       [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "flag": 'a', "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
     except:
-      print "Can't find raw 2MASS data! (%s)" % self.name
+      print "  Can't find raw 2MASS data! (%s)" % self.name
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try:
-      print [("RA: %.5f" % RA, "Dec: %.5f" % Dec) for RA, Dec in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()))]
+      print [("lat: %.5f" % lat, "lon: %.5f" % lon) for lat, lon in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()))]
     except:
-      print "Can't find raw GALEX data! (%s)" % self.name
+      print "  Can't find raw GALEX data! (%s)" % self.name
 
 def get_votable(url):
   """Fetches from the web and returns data for a source, in an astropy votable."""
-  print url
+  print " ", url
   try:
     xml_file = urllib.urlopen(url) # grab xml file-like-object from the web
     time.sleep(1) # respect request throttling recommendations
@@ -180,3 +187,11 @@ def get_votable(url):
       warnings.simplefilter("ignore") # suppress astropy warnings
       return astropy.io.votable.parse_single_table(xml_file) # parse xml to astropy votable
   except: raise Exception("Could not download or interpret data from %s. Are you connected to the Internet?" % url)
+
+def parse_line(line):
+  """Parses to a dictionary the data on a given line of input."""
+  line = line.strip()
+  for regexp in (POLARISATION_REGEXP, NED_NAME_REGEXP): # check if polarisation data or ned names (order of matches matters)
+    try:
+      return regexp.match(line).groupdict() # errors if no match
+    except: continue # function evaluates false if never matches
