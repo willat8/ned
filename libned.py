@@ -129,7 +129,8 @@ class Source:
       url = "http://galex.stsci.edu/GR6/" + re.compile("tmp\/galex_-[0-9]*\.xml").search(popup_js).group() # grabs the temp file name and constructs the url
 
       return get_votable(url)
-    except: raise Exception("Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % GALEX_SEARCH_PAGE)
+    except:
+      print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % GALEX_SEARCH_PAGE
 
   def parse_ned_position(self):
     """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them."""
@@ -137,7 +138,8 @@ class Source:
     try:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
-    except: raise Exception("Can't find raw NED position data!")
+    except:
+      print "  Can't find raw NED position data!"
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -186,7 +188,8 @@ def get_votable(url):
     with warnings.catch_warnings():
       warnings.simplefilter("ignore") # suppress astropy warnings
       return astropy.io.votable.parse_single_table(xml_file) # parse xml to astropy votable
-  except: raise Exception("Could not download or interpret data from %s. Are you connected to the Internet?" % url)
+  except:
+    print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % url
 
 def parse_line(line):
   """Parses to a dictionary the data on a given line of input."""
