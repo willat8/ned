@@ -1,15 +1,15 @@
 #!/usr/bin/python2
 
-import libned
+import libned, argparse, sys
 
-# temporary test data
-_test_polarisation_data = [
-"1.59417,-0.07364,FBQS J0006-0004,1.037,22.5,3.3",
-"197.16317,-9.84211,PKS 1306-09,0.46685,-27.3,2.0"
-]
+parser = argparse.ArgumentParser(description="Scripts to access NASA/IPAC Extragalactic Database")
+parser.add_argument("input", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="input data (will take manual input if not specified)")
+parser.add_argument("-f", "--file", type=str, default=sys.stdout, help="output filename")
+in_file = vars(parser.parse_args())["input"] # a file-like object
+out_file = vars(parser.parse_args())["file"] # a string of a filename
 
-print "ANALYSING POLARISATION DATA..."
-_sources = [libned.Source(entry) for entry in _test_polarisation_data]
+print "ANALYSING INPUT DATA..."
+_sources = [libned.Source(line) for line in in_file if libned.parse_entry(line)] # could be memoized
 print
 print "DOWNLOADING NED DATA..."
 [setattr(_source, "ned_position", _source.get_ned_position_votable()) for _source in _sources] # fetch ned position data
