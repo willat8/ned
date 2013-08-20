@@ -13,7 +13,7 @@ Usage:
  $ chmod +x ned.py
  $ ./ned.py data.dat
 where data.dat is a newline-separated list of Polarisation Catalog entries or NED names.
-A sample data.dat is provided.
+Sample dat files are provided.
 
 Note that running the script without any file input:
  $ ./ned.py
