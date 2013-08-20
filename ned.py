@@ -3,7 +3,7 @@
 import libned, argparse, sys
 
 parser = argparse.ArgumentParser(description="Scripts to access NASA/IPAC Extragalactic Database (NED), Wide-Field Infrared Survey Explorer (WISE), Two Micron All Sky Survey (2MASS), and Galaxy Evolution Explorer (GALEX) online data.")
-parser.add_argument("input", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="input data (will take manual input if not specified)")
+parser.add_argument("input", nargs="?", type=argparse.FileType("r"), default=sys.stdin, help="polarisation catalog or NED names input data (will take manual input if not specified)")
 parser.add_argument("-f", "--file", type=argparse.FileType("w"), default=sys.stdout, help="output filename")
 in_file = vars(parser.parse_args())["input"] # a file-like object
 out_file = vars(parser.parse_args())["file"] # a string of a filename
