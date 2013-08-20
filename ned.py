@@ -8,13 +8,12 @@ parser.add_argument("-f", "--file", type=argparse.FileType("w"), default=sys.std
 in_file = vars(parser.parse_args())["input"] # a file-like object
 out_file = vars(parser.parse_args())["file"] # a string of a filename
 
-print "ANALYSING INPUT DATA..."
+print "GETTING AND ANALYSING INPUT DATA..."
 _sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
 print
 print "DOWNLOADING NED DATA..."
 [setattr(_source, "ned_position", _source.get_ned_position_votable()) for _source in _sources] # fetch ned position data
 [setattr(_source, "ned_sed", _source.get_ned_sed_votable()) for _source in _sources] # fetch ned sed data
-print
 print "ANALYSING NED POSITION DATA..."
 [_source.parse_ned_position() for _source in _sources] # parse and store ned position data
 print "ANALYSING NED SED DATA..."

@@ -148,7 +148,7 @@ class Source:
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try:
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "lat": self.ned_lat, "lon": self.ned_lon, "offset_from_ned": 0., "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "lat": self.ned_lat, "lon": self.ned_lon, "offset_from_ned": 0., "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))].pop() # pop to trigger error if list empty
       print " ", self.name
     except:
       print "  Can't find raw NED SED data! (%s)" % self.name
@@ -172,7 +172,7 @@ class Source:
     try:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))] # errors if no twomass data found
       print " ", self.name
     except:
       print "  Can't find raw 2MASS data! (%s)" % self.name
@@ -180,7 +180,7 @@ class Source:
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try:
-      [[self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux/1e6, "source": "GALEX", "lat": lat, "lon": lon, "offset_from_ned": math.hypot(self.ned_lat-lat, self.ned_lon-lon)*3600, "extinction": extinction, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux, extinction in zip((1.963e15, 1.321e15), fluxes, (10**(.4*e_bv*8.24), 10**(.4*e_bv*(8.24-e_bv*0.67)))) if flux != -999.] for lat, lon, fluxes, e_bv in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()), zip(map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["nuv_flux"].data.tolist())), map(float, self.galex.array["e_bv"].data.tolist()))] # note the nonsense flux value filtering
+      [[self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux/1e6, "source": "GALEX", "lat": lat, "lon": lon, "offset_from_ned": math.hypot(self.ned_lat-lat, self.ned_lon-lon)*3600, "extinction": extinction, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux, extinction in zip((1.963e15, 1.321e15), fluxes, (10**(.4*e_bv*8.24), 10**(.4*e_bv*(8.24-e_bv*0.67)))) if flux != -999.] for lat, lon, fluxes, e_bv in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()), zip(map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["nuv_flux"].data.tolist())), map(float, self.galex.array["e_bv"].data.tolist()))].pop() # note the nonsense flux value filtering
       print " ", self.name
     except:
       print "  Can't find raw GALEX data! (%s)" % self.name
