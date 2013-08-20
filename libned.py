@@ -1,4 +1,6 @@
-"""This module provides tools for querying the NASA\IPAC Extragalactic Database (NED), the Wide-field Infrared Survey Explorer (WISE) database, the Two Micron All Sky Survey (2MASS) database and the Galaxy Evolution Explorer (GALEX) database."""
+"""This module provides tools for querying the NASA\IPAC Extragalactic Database (NED),
+   the Wide-field Infrared Survey Explorer (WISE) database, the Two Micron All Sky Survey (2MASS) database
+   and the Galaxy Evolution Explorer (GALEX) database."""
 
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re
 
