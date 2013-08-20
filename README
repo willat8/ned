@@ -1,4 +1,4 @@
-Revision control for NED python scripting
+Scripts to access NASA/IPAC Extragalactic Database (NED), Wide-Field Infrared Survey Explorer (WISE), Two Micron All Sky Survey (2MASS), and Galaxy Evolution Explorer (GALEX) online data.
 
 Requirements:
   + Python 2.7 release series (http://www.python.org/download/releases/)
