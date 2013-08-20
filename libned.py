@@ -28,9 +28,10 @@ WISE_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog
 TWOMASS_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog=fp_psc&outfmt=3\
 &objstr=%(lat).5f+%(lon).5f"
 GALEX_SEARCH_PAGE = "http://galex.stsci.edu/GR6/?page=sqlform"
-GALEX_SQL_QUERY = "SELECT TOP 100 p.objid, p.ra, p.dec, n.distance, p.band, p.fuv_mag, p.nuv_mag, p.fuv_flux, p.nuv_flux, p.e_bv FROM PhotoObjAll AS p, \
-dbo.fGetNearbyObjEq(%(lat).5f, %(lon).5f, 0.2) \
-AS n WHERE p.objID=n.objID ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
+GALEX_SQL_QUERY = "SELECT TOP 100 p.objid, p.ra, p.dec, n.distance, p.band, p.fuv_mag, p.nuv_mag, p.fuv_flux, p.nuv_flux, p.e_bv \
+FROM PhotoObjAll AS p, dbo.fGetNearbyObjEq(%(lat).5f, %(lon).5f, 0.2) AS n \
+WHERE p.objID=n.objID \
+ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
 
 class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
