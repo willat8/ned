@@ -5,6 +5,7 @@ v1.2 (15 Aug 2013): Implemented 2MASS parsing and output. Runtime output is more
 		      + File output
 		      + Data output formatting with conf file
 		      + Non-UNIX newline characters
+		      + Inconsistent GALEX messages
 
 v1.1 (15 Aug 2013): New approach to data storage. Outputs in .dat-ready format.
 		    Supports data fetching from NED, WISE and 2MASS, but parsing and output of NED and WISE data only.

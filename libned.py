@@ -28,7 +28,7 @@ WISE_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog
 TWOMASS_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog=fp_psc&outfmt=3\
 &objstr=%(lat).5f+%(lon).5f"
 GALEX_SEARCH_PAGE = "http://galex.stsci.edu/GR6/?page=sqlform"
-GALEX_SQL_QUERY = "SELECT TOP 100 p.objid, p.ra, p.dec, n.distance, p.band, p.fuv_mag, p.nuv_mag, p.e_bv FROM PhotoObjAll AS p, \
+GALEX_SQL_QUERY = "SELECT TOP 100 p.objid, p.ra, p.dec, n.distance, p.band, p.fuv_mag, p.nuv_mag, p.fuv_flux, p.nuv_flux, p.e_bv FROM PhotoObjAll AS p, \
 dbo.fGetNearbyObjEq(%(lat).5f, %(lon).5f, 0.2) \
 AS n WHERE p.objID=n.objID ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
 
@@ -42,21 +42,21 @@ class DataPoint:
     self.num = -1
     self.freq = float("inf")
     self.flux = float("inf")
-    self.source = None # refers to the data source
-    self.flag = 0
+    self.source = None # refers to the data source name
+    self.flag = 'a' # only supports this flag
     self.lat = float("inf")
     self.lon = float("inf")
     self.offset_from_ned = float("inf")
     self.extinction = 1. # default extinction value for all sources?
     self.RM = None
     self.RM_err = None
-    self.offset_from_pol = float("inf")
+    self.pol_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in data.items()] # set proper values
 
   def __repr__(self):
     """Formats and prints the frequency vs flux data for a space-separated .dat file."""
-    return "%(index)d  %(name)s %(z).5f %(num)d   %(freq).3e %(flux).3e %(source)s  %(flag)c %(lat).5f %(lon).5f %(offset_from_ned).1f  %(extinction).3e  %(RM)s %(RM_err)s %(offset_from_pol).2f" % vars(self)
+    return "%(index)d  %(name)s %(z).5f %(num)d   %(freq).3e %(flux).3e %(source)s  %(flag)c %(lat).5f %(lon).5f %(offset_from_ned).1f  %(extinction).3e  %(RM)s %(RM_err)s %(pol_offset_from_ned).2f" % vars(self)
 
 class Source:
   """Instances of this class represent extragalactic objects."""
@@ -78,6 +78,7 @@ class Source:
     self.RM_err = None
     self.pol_lat = float("inf")
     self.pol_lon = float("inf")
+    self.pol_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
     self.pol_lat = float(self.pol_lat) # fix up types
@@ -135,24 +136,24 @@ class Source:
 
   def parse_ned_position(self):
     """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them."""
-    print " ", self.name
     try:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
+      self.pol_offset_from_ned = math.hypot(self.ned_lat-self.pol_lat, self.ned_lon-self.pol_lon)*3600 # will be set if above is successful
+      print " ", self.name
     except:
-      print "  Can't find raw NED position data!"
+      print "  Can't find raw NED position data! (%s)" % self.name
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
-    print " ", self.name
     try:
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "flag": 'a', "lat": self.ned_lat, "lon": self.ned_lon, "offset_from_ned": 0., "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "NED", "lat": self.ned_lat, "lon": self.ned_lon, "offset_from_ned": 0., "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip(map(float, self.ned_sed.array["Frequency"].data.tolist()), map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()))]
+      print " ", self.name
     except:
       print "  Can't find raw NED SED data! (%s)" % self.name
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
-    print " ", self.name
     try: # see if 2mass data is included
       [int(self.wise.array[name].data.item()) for name in ["%s_m_2mass" % letter for letter in ("j", "h", "k")]]  # will error if no 2mass data
       self.twomass = self.wise # if gets to here then 2mass is included in wise
@@ -160,7 +161,8 @@ class Source:
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "WISE", "flag": 'a', "lat": wise_lat, "lon": wise_lon, "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)]))]
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "WISE", "lat": wise_lat, "lon": wise_lon, "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip((8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)])) if flux!=-999.] # note the nonsense flux value filtering
+      print " ", self.name
     except:
       print "  Can't find raw WISE data! (%s)" % self.name
 
@@ -169,14 +171,16 @@ class Source:
     try:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
-      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "flag": 'a', "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "offset_from_pol": math.hypot(self.pol_lat-self.ned_lat, self.pol_lon-self.ned_lon)*3600})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
+      [self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux, "source": "2MASS", "lat": twomass_lat, "lon": twomass_lon, "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux in zip((2.429e14, 1.805e14, 1.390e14), map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")]))]
+      print " ", self.name
     except:
       print "  Can't find raw 2MASS data! (%s)" % self.name
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try:
-      print [("lat: %.5f" % lat, "lon: %.5f" % lon) for lat, lon in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()))]
+      [[self.points.append(DataPoint({"index": index, "name": self.name.replace(" ",""), "z": self.z, "num": len(self.points)+1, "freq": freq, "flux": flux/1e6, "source": "GALEX", "lat": lat, "lon": lon, "offset_from_ned": math.hypot(self.ned_lat-lat, self.ned_lon-lon)*3600, "extinction": extinction, "RM": self.RM, "RM_err": self.RM_err, "pol_offset_from_ned": self.pol_offset_from_ned})) for freq, flux, extinction in zip((1.963e15, 1.321e15), fluxes, (10**(.4*e_bv*8.24), 10**(.4*e_bv*(8.24-e_bv*0.67)))) if flux != -999.] for lat, lon, fluxes, e_bv in zip(map(float, self.galex.array["ra"].data.tolist()), map(float, self.galex.array["dec"].data.tolist()), zip(map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["nuv_flux"].data.tolist())), map(float, self.galex.array["e_bv"].data.tolist()))] # note the nonsense flux value filtering
+      print " ", self.name
     except:
       print "  Can't find raw GALEX data! (%s)" % self.name
 
