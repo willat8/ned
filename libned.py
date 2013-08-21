@@ -2,7 +2,7 @@
    the Wide-field Infrared Survey Explorer (WISE) database, the Two Micron All Sky Survey (2MASS) database
    and the Galaxy Evolution Explorer (GALEX) database."""
 
-import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re
+import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy
 
 POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
   ^
@@ -46,7 +46,7 @@ class DataPoint:
     self.freq = float("inf")
     self.flux = float("inf")
     self.source = None # refers to the data source name
-    self.flag = 'a' # only supports this flag
+    self.flag = 'a'
     self.lat = float("inf")
     self.lon = float("inf")
     self.offset_from_ned = float("inf")
@@ -63,6 +63,8 @@ class DataPoint:
 
 class Source:
   """Instances of this class represent extragalactic objects."""
+  tolerance = 10. # global 10 arcsecond position offset tolerance
+
   def __init__(self, line):
     self.points = []
     self.line = line # raw input specifying source
@@ -242,40 +244,47 @@ class Source:
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try:
-      [[self.points.append(DataPoint({\
-           "index": index, \
-           "name": self.name.replace(" ",""), \
-           "z": self.z, \
-           "num": len(self.points)+1, \
-           "freq": freq, \
-           "flux": flux/1e6, \
-           "source": "GALEX", \
-           "lat": lat, \
-           "lon": lon, \
-           "offset_from_ned": math.hypot(self.ned_lat-lat, self.ned_lon-lon)*3600, \
-           "extinction": extinction, \
-           "RM": self.RM, \
-           "RM_err": self.RM_err, \
-           "pol_offset_from_ned": self.pol_offset_from_ned\
-          })) \
-         for freq, flux, extinction \
-         in zip(\
-           (1.963e15, 1.321e15), \
-           fluxes, \
-           (10**(.4*e_bv*8.24), 10**(.4*e_bv*(8.24-e_bv*0.67)))\
-          ) \
-        ] \
-       for lat, lon, fluxes, e_bv \
+      galex_lats = map(float, self.galex.array["ra"].data.tolist())
+      galex_lons = map(float, self.galex.array["dec"].data.tolist())
+      galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
+      mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
+
+      galex_fuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
+      galex_nuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["nuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
+
+      galex_fuv_flag = 'm' if len(galex_fuv_data["lat"]) > 1 else 'a' # length will be greater than 0 if averaging over multiple values
+      galex_nuv_flag = 'm' if len(galex_nuv_data["lat"]) > 1 else 'a' # these will error if no galex data
+
+      galex_fuv_averages = dict((key, numpy.mean(value)) for key, value in galex_fuv_data.items())
+      galex_nuv_averages = dict((key, numpy.mean(value)) for key, value in galex_nuv_data.items())
+
+      [self.points.append(DataPoint({\
+         "index": index, \
+         "name": self.name.replace(" ",""), \
+         "z": self.z, \
+         "num": len(self.points)+1, \
+         "freq": freq, \
+         "flux": avg_flux/1e6, \
+         "source": "GALEX", \
+         "flag": flag, \
+         "lat": avg_lat, \
+         "lon": avg_lon, \
+         "offset_from_ned": math.hypot(self.ned_lat-avg_lat, self.ned_lon-avg_lon)*3600, \
+         "extinction": avg_extinction, \
+         "RM": self.RM, \
+         "RM_err": self.RM_err, \
+         "pol_offset_from_ned": self.pol_offset_from_ned\
+        })) \
+       for freq, avg_flux, flag, avg_lat, avg_lon, avg_extinction \
        in zip(\
-         map(float, self.galex.array["ra"].data.tolist()), \
-         map(float, self.galex.array["dec"].data.tolist()), \
-         zip(\
-           map(float, self.galex.array["fuv_flux"].data.tolist()), \
-           map(float, self.galex.array["nuv_flux"].data.tolist())\
-          ), \
-         map(float, self.galex.array["e_bv"].data.tolist())\
+         (1.963e15, 1.321e15), \
+         (galex_fuv_averages["flux"], galex_nuv_averages["flux"]), \
+         (galex_fuv_flag, galex_nuv_flag), \
+         (galex_fuv_averages["lat"], galex_nuv_averages["lat"]), \
+         (galex_fuv_averages["lon"], galex_nuv_averages["lon"]), \
+         (10**(.4*galex_fuv_averages["e_bv"]*8.24), 10**(.4*galex_nuv_averages["e_bv"]*(8.24-galex_nuv_averages["e_bv"]*0.67)))\
         )\
-      ].pop() # pop to trigger error if list empty
+      ]
       print " ", self.name
     except:
       print "  Can't find raw GALEX data! (%s)" % self.name

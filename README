@@ -1,5 +1,6 @@
 Requirements:
   + Python 2.7 release series (http://www.python.org/download/releases/)
+  + NumPy (http://www.numpy.org/)
   + Astropy (http://www.astropy.org/)
   + Mechanize (http://wwwsearch.sourceforge.net/mechanize/download.html)
   + Beautiful Soup 4 (http://www.crummy.com/software/BeautifulSoup/)
