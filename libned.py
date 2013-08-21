@@ -130,8 +130,8 @@ class Source:
       html = bs4.BeautifulSoup(response.get_data()) # read data into html parser
       browser.close()
 
-      popup_js = html.find("script", text=re.compile("^window.open\('tmp\/galex_-[0-9]*\.xml'\)$")).find(text=True) # returns the content of the script tag
-      url = "http://galex.stsci.edu/GR6/" + re.compile("tmp\/galex_-[0-9]*\.xml").search(popup_js).group() # grabs the temp file name and constructs the url
+      popup_js = html.find("script", text=re.compile("^window.open\('tmp\/galex_\S+\.xml'\)$")).find(text=True) # returns the content of the script tag
+      url = "http://galex.stsci.edu/GR6/" + re.compile("tmp\/galex_\S+\.xml").search(popup_js).group() # grabs the temp file name and constructs the url
 
       return get_votable(url)
     except:

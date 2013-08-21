@@ -8,14 +8,13 @@ parser.add_argument("-f", "--file", type=argparse.FileType("w"), default=sys.std
 in_file = vars(parser.parse_args())["input"] # a file-like object
 out_file = vars(parser.parse_args())["file"] # a string of a filename
 
-print "Reading configuration file ned.conf"
+print "READING CONFIGURATION FILE ned.conf"
 try:
   libned.DataPoint.repr_format_string = " ".join(line.rstrip("\n") for line in open("ned.conf", "rU") if line.lstrip() and line.lstrip()[0] != "#") # could upgrade this to config parse module in the future
 except:
-  print "Could not read configuration file ned.conf"
-print "Output string set to:"
+  print "COULD NOT READ CONFIGURATION FILE ned.conf"
+print "OUTPUT FORMAT SET TO:"
 print libned.DataPoint.repr_format_string
-
 print
 print "GETTING AND ANALYSING INPUT DATA..."
 _sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
