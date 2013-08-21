@@ -35,6 +35,8 @@ ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
 
 class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
+  repr_format_string = ""
+
   def __init__(self, data):
     # initialise default values with correct types for output string
     self.index = -1
@@ -56,8 +58,8 @@ class DataPoint:
     [setattr(self, *entry) for entry in data.items()] # set proper values
 
   def __repr__(self):
-    """Formats and prints the frequency vs flux data for a space-separated .dat file."""
-    return "%(index)d  %(name)s %(z).5f %(num)d   %(freq).3e %(flux).3e %(source)s  %(flag)c %(lat).5f %(lon).5f %(offset_from_ned).1f  %(extinction).3e  %(RM)s %(RM_err)s %(pol_offset_from_ned).2f" % vars(self)
+    """Formats the frequency vs flux data for a space-separated .dat file given a user-specified format string."""
+    return self.repr_format_string % vars(self)
 
 class Source:
   """Instances of this class represent extragalactic objects."""

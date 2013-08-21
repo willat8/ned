@@ -15,6 +15,9 @@ Usage:
 where data.dat is a newline-separated list of Polarisation Catalog entries or NED names.
 Sample dat files are provided.
 
+The output format can be specified in the ned.conf configuration file.
+The syntax is a normal python format string. See ned.conf for the available data fields.
+
 Note that running the script without any file input:
  $ ./ned.py
 will wait for manual data input. To indicate the end of a line of entry hit Return and then Ctrl+D.
