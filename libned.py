@@ -202,8 +202,7 @@ class Source:
          (8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), \
          map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)])\
         ) \
-       if flux!=-999.\
-      ] # note the nonsense flux value filtering
+      ]
       print " ", self.name
     except:
       print "  Can't find raw WISE data! (%s)" % self.name
@@ -233,7 +232,7 @@ class Source:
          (2.429e14, 1.805e14, 1.390e14), \
          map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")])\
         )\
-      ] # errors if no twomass data found
+      ]
       print " ", self.name
     except:
       print "  Can't find raw 2MASS data! (%s)" % self.name
@@ -263,7 +262,6 @@ class Source:
            fluxes, \
            (10**(.4*e_bv*8.24), 10**(.4*e_bv*(8.24-e_bv*0.67)))\
           ) \
-         if flux != -999.\
         ] \
        for lat, lon, fluxes, e_bv \
        in zip(\
@@ -275,7 +273,7 @@ class Source:
           ), \
          map(float, self.galex.array["e_bv"].data.tolist())\
         )\
-      ].pop() # note the nonsense flux value filtering
+      ].pop() # pop to trigger error if list empty
       print " ", self.name
     except:
       print "  Can't find raw GALEX data! (%s)" % self.name
