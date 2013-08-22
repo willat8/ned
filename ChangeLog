@@ -1,3 +1,9 @@
+v1.3 (22 Aug 2013): Implemented GALEX parsing, filtering and output. Added command line switches.
+		    Added option for file output and output format customisation.
+		    To do:
+		      + NED, WISE and 2MASS filtering
+		      + Plot mode for plot-ready output
+
 v1.2 (15 Aug 2013): Implemented 2MASS parsing and output. Runtime output is more descriptive.
 		    To do:
 		      + GALEX support
