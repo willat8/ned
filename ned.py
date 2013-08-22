@@ -17,32 +17,32 @@ print "OUTPUT FORMAT SET TO:"
 print libned.DataPoint.repr_format_string
 print
 print "GETTING AND ANALYSING INPUT DATA..."
-_sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
+sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
 print
 print "DOWNLOADING NED DATA..."
-[setattr(_source, "ned_position", _source.get_ned_position_votable()) for _source in _sources] # fetch ned position data
-[setattr(_source, "ned_sed", _source.get_ned_sed_votable()) for _source in _sources] # fetch ned sed data
+[setattr(source, "ned_position", source.get_ned_position_votable()) for source in sources] # fetch ned position data
+[setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED POSITION DATA..."
-[_source.parse_ned_position() for _source in _sources] # parse and store ned position data
+[source.parse_ned_position() for source in sources] # parse and store ned position data
 print "ANALYSING NED SED DATA..."
-[_source.parse_ned_sed(index+1) for index, _source in enumerate(_sources)] # parse and store ned sed data
+[source.parse_ned_sed(index+1) for index, source in enumerate(sources)] # parse and store ned sed data
 print
 print "DOWNLOADING WISE DATA..."
-[setattr(_source, "wise", _source.get_wise_votable()) for _source in _sources] # fetch wise data
+[setattr(source, "wise", source.get_wise_votable()) for source in sources] # fetch wise data
 print "ANALYSING WISE DATA..."
-[_source.parse_wise(index+1) for index,_source in enumerate(_sources)] # parse and store wise data (including any 2mass data)
+[source.parse_wise(index+1) for index, source in enumerate(sources)] # parse and store wise data (including any 2mass data)
 print
 print "DOWNLOADING ANY MISSING 2MASS DATA..."
-[setattr(_source, "twomass", _source.get_twomass_votable()) for _source in _sources if not _source.twomass] # fetch 2mass data if missing
+[setattr(source, "twomass", source.get_twomass_votable()) for source in sources if not source.twomass] # fetch 2mass data if missing
 print "ANALYSING 2MASS DATA..."
-[_source.parse_twomass(index+1) for index,_source in enumerate(_sources)] # parse and store 2mass data
+[source.parse_twomass(index+1) for index, source in enumerate(sources)] # parse and store 2mass data
 print
 print "DOWNLOADING GALEX DATA..."
-[setattr(_source, "galex", _source.get_galex_votable()) for _source in _sources] # fetch galex data
+[setattr(source, "galex", source.get_galex_votable()) for source in sources] # fetch galex data
 print "ANALYSING GALEX DATA..."
-[_source.parse_galex(index+1) for index,_source in enumerate(_sources)] # parse and store galex data
+[source.parse_galex(index+1) for index, source in enumerate(sources)] # parse and store galex data
 print
 print "RESULTS"
-for _source in _sources: print >> out_file, _source
+for source in sources: print >> out_file, source
 print "OUTPUT WRITTEN TO %s" % out_file.name
 out_file.close()
