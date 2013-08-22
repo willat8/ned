@@ -25,7 +25,7 @@ will wait for manual data input. To indicate the end of a line of entry hit Retu
 To indicate the end of input hit Ctrl+D again.
 
 If an output filename is specified:
- $ ./ned.py --file out.dat pol.dat
+ $ ./ned.py --file out.dat data.dat
 then results will be written to that file. Otherwise results are displayed.
 
 For more information refer to:
