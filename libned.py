@@ -243,50 +243,57 @@ class Source:
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
+    galex_lats = map(float, self.galex.array["ra"].data.tolist())
+    galex_lons = map(float, self.galex.array["dec"].data.tolist())
+    galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
+    mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
+
+    galex_fuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
+    galex_nuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["nuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
+
+    galex_fuv_averages = dict((key, numpy.mean(value)) for key, value in galex_fuv_data.items())
+    galex_nuv_averages = dict((key, numpy.mean(value)) for key, value in galex_nuv_data.items())
+
+    galex_fuv_flag = galex_nuv_flag = False # will be used later to apply default flag
     try:
-      galex_lats = map(float, self.galex.array["ra"].data.tolist())
-      galex_lons = map(float, self.galex.array["dec"].data.tolist())
-      galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
-      mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
-
-      galex_fuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
-      galex_nuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["nuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
-
-      galex_fuv_flag = 'm' if len(galex_fuv_data["lat"]) > 1 else 'a' # length will be greater than 0 if averaging over multiple values
-      galex_nuv_flag = 'm' if len(galex_nuv_data["lat"]) > 1 else 'a' # these will error if no galex data
-
-      galex_fuv_averages = dict((key, numpy.mean(value)) for key, value in galex_fuv_data.items())
-      galex_nuv_averages = dict((key, numpy.mean(value)) for key, value in galex_nuv_data.items())
-
-      [self.points.append(DataPoint({\
-         "index": index, \
-         "name": self.name.replace(" ",""), \
-         "z": self.z, \
-         "num": len(self.points)+1, \
-         "freq": freq, \
-         "flux": avg_flux/1e6, \
-         "source": "GALEX", \
-         "flag": flag, \
-         "lat": avg_lat, \
-         "lon": avg_lon, \
-         "offset_from_ned": math.hypot(self.ned_lat-avg_lat, self.ned_lon-avg_lon)*3600, \
-         "extinction": avg_extinction, \
-         "RM": self.RM, \
-         "RM_err": self.RM_err, \
-         "pol_offset_from_ned": self.pol_offset_from_ned\
-        })) \
-       for freq, avg_flux, flag, avg_lat, avg_lon, avg_extinction \
-       in zip(\
-         (1.963e15, 1.321e15), \
-         (galex_fuv_averages["flux"], galex_nuv_averages["flux"]), \
-         (galex_fuv_flag, galex_nuv_flag), \
-         (galex_fuv_averages["lat"], galex_nuv_averages["lat"]), \
-         (galex_fuv_averages["lon"], galex_nuv_averages["lon"]), \
-         (10**(.4*galex_fuv_averages["e_bv"]*8.24), 10**(.4*galex_nuv_averages["e_bv"]*(8.24-galex_nuv_averages["e_bv"]*0.67)))\
-        )\
-      ]
-      print " ", self.name
+      if len(galex_fuv_data["lat"]) > 1:
+        galex_fuv_flag = 'm' # will be set if averaging over multiple values
+      galex_fuv_averages["extinction"] = 10**(.4*galex_fuv_averages["e_bv"]*8.24) # will be set if fuv data exists
     except:
+      galex_fuv_flag = True # set to true if no fuv data
+    try:
+      if len(galex_nuv_data["lat"]) > 1:
+        galex_nuv_flag = 'm' # length will be greater than 0 if averaging over multiple values
+      galex_nuv_averages["extinction"] = 10**(.4*galex_nuv_averages["e_bv"]*(8.24-galex_nuv_averages["e_bv"]*0.67)) # will be set if nuv data exists
+    except:
+      galex_nuv_flag = True # set to true if no nuv data
+
+    for freq, galex_averages, galex_flag in zip((1.963e15, 1.321e15), (galex_fuv_averages, galex_nuv_averages), (galex_fuv_flag, galex_nuv_flag)):
+      if galex_flag == True: # no results for this regime
+        continue
+      self.points.append(DataPoint({\
+        key: value for key, value in (\
+          ("index", index), \
+          ("name", self.name.replace(" ","")), \
+          ("z", self.z), \
+          ("num", len(self.points)+1), \
+          ("freq", freq), \
+          ("flux", galex_averages["flux"]/1e6), \
+          ("source", "GALEX"), \
+          ("flag", galex_flag), \
+          ("lat", galex_averages["lat"]), \
+          ("lon", galex_averages["lon"]), \
+          ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
+          ("extinction", galex_averages["extinction"]), \
+          ("RM", self.RM), \
+          ("RM_err", self.RM_err), \
+          ("pol_offset_from_ned", self.pol_offset_from_ned)\
+         )
+        if not (key == "flag" and not value)\
+       })) # don't include flag if not changed from default
+    if galex_averages:
+      print " ", self.name
+    else:
       print "  Can't find raw GALEX data! (%s)" % self.name
 
 def get_votable(url):
