@@ -243,57 +243,58 @@ class Source:
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
-    galex_lats = map(float, self.galex.array["ra"].data.tolist())
-    galex_lons = map(float, self.galex.array["dec"].data.tolist())
-    galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
-    mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
-
-    galex_fuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["fuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
-    galex_nuv_data = dict(zip(("lat", "lon", "offset", "flux", "e_bv"), zip(*filter(mean_filter, zip(galex_lats, galex_lons, galex_offsets_from_ned, map(float, self.galex.array["nuv_flux"].data.tolist()), map(float, self.galex.array["e_bv"].data.tolist())))))) # only wanted data remains
-
-    galex_fuv_averages = dict((key, numpy.mean(value)) for key, value in galex_fuv_data.items())
-    galex_nuv_averages = dict((key, numpy.mean(value)) for key, value in galex_nuv_data.items())
-
-    galex_fuv_flag = galex_nuv_flag = False # will be used later to apply default flag
     try:
-      if len(galex_fuv_data["lat"]) > 1:
-        galex_fuv_flag = 'm' # will be set if averaging over multiple values
-      galex_fuv_averages["extinction"] = 10**(.4*galex_fuv_averages["e_bv"]*8.24) # will be set if fuv data exists
-    except:
-      galex_fuv_flag = True # set to true if no fuv data
-    try:
-      if len(galex_nuv_data["lat"]) > 1:
-        galex_nuv_flag = 'm' # length will be greater than 0 if averaging over multiple values
-      galex_nuv_averages["extinction"] = 10**(.4*galex_nuv_averages["e_bv"]*(8.24-galex_nuv_averages["e_bv"]*0.67)) # will be set if nuv data exists
-    except:
-      galex_nuv_flag = True # set to true if no nuv data
+      galex_lats = map(float, self.galex.array["ra"].data.tolist())
+      galex_lons = map(float, self.galex.array["dec"].data.tolist())
+      galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
 
-    for freq, galex_averages, galex_flag in zip((1.963e15, 1.321e15), (galex_fuv_averages, galex_nuv_averages), (galex_fuv_flag, galex_nuv_flag)):
-      if galex_flag == True: # no results for this regime
-        continue
-      self.points.append(DataPoint({\
-        key: value for key, value in (\
-          ("index", index), \
-          ("name", self.name.replace(" ","")), \
-          ("z", self.z), \
-          ("num", len(self.points)+1), \
-          ("freq", freq), \
-          ("flux", galex_averages["flux"]/1e6), \
-          ("source", "GALEX"), \
-          ("flag", galex_flag), \
-          ("lat", galex_averages["lat"]), \
-          ("lon", galex_averages["lon"]), \
-          ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
-          ("extinction", galex_averages["extinction"]), \
-          ("RM", self.RM), \
-          ("RM_err", self.RM_err), \
-          ("pol_offset_from_ned", self.pol_offset_from_ned)\
-         )
-        if not (key == "flag" and not value)\
-       })) # don't include flag if not changed from default
-    if galex_averages:
-      print " ", self.name
-    else:
+      mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
+
+      for freq, flux_name, extinction in zip((1.963e15, 1.321e15), ("fuv_flux", "nuv_flux"), (lambda e_bv: 10**(.4*e_bv*8.24), lambda e_bv: 10**(.4*e_bv*(8.24-e_bv*0.67)))):
+        galex_averages = dict(\
+          (key, numpy.mean(value)) \
+          for key, value \
+          in zip(\
+            ("lat", "lon", "offset", "flux", "e_bv"), \
+            zip(*filter(\
+              mean_filter, \
+              zip(\
+                galex_lats, \
+                galex_lons, \
+                galex_offsets_from_ned, \
+                map(float, self.galex.array[flux_name].data.tolist()), \
+                map(float, self.galex.array["e_bv"].data.tolist())\
+               )\
+             ))\
+           )\
+         ) # only wanted data remains
+
+        try:
+          self.points.append(DataPoint({\
+            key: value for key, value in (\
+              ("index", index), \
+              ("name", self.name.replace(" ","")), \
+              ("z", self.z), \
+              ("num", len(self.points)+1), \
+              ("freq", freq), \
+              ("flux", galex_averages["flux"]/1e6), \
+              ("source", "GALEX"), \
+              ("flag", 'm'*(not not len(galex_offsets_from_ned) > 1)), \
+              ("lat", galex_averages["lat"]), \
+              ("lon", galex_averages["lon"]), \
+              ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
+              ("extinction", extinction(galex_averages["e_bv"])), \
+              ("RM", self.RM), \
+              ("RM_err", self.RM_err), \
+              ("pol_offset_from_ned", self.pol_offset_from_ned)\
+             )
+            if not (key == "flag" and not value)\
+           })) # don't include flag if not changed from default
+        except: pass # keep going with the loop
+
+      galex_offsets_from_ned.pop() # will error if empty
+      print " ", self.name # successfully found at least some data
+    except:
       print "  Can't find raw GALEX data! (%s)" % self.name
 
 def get_votable(url):
