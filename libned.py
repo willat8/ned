@@ -186,6 +186,7 @@ class Source:
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
+      wise_offset = math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600
       [self.points.append(DataPoint({\
          "index": index, \
          "name": self.name.replace(" ",""), \
@@ -196,7 +197,7 @@ class Source:
          "source": "WISE", \
          "lat": wise_lat, \
          "lon": wise_lon, \
-         "offset_from_ned": math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600, \
+         "offset_from_ned": wise_offset, \
          "RM": self.RM, \
          "RM_err": self.RM_err, \
          "pol_offset_from_ned": self.pol_offset_from_ned\
@@ -206,6 +207,7 @@ class Source:
          (8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), \
          map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)])\
         ) \
+       if wise_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
       print " ", self.name
     except:
@@ -216,6 +218,7 @@ class Source:
     try:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
+      twomass_offset = math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600
       [self.points.append(DataPoint({\
          "index": index, \
          "name": self.name.replace(" ",""), \
@@ -226,7 +229,7 @@ class Source:
          "source": "2MASS", \
          "lat": twomass_lat, \
          "lon": twomass_lon, \
-         "offset_from_ned": math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600, \
+         "offset_from_ned": twomass_offset, \
          "RM": self.RM, \
          "RM_err": self.RM_err, \
          "pol_offset_from_ned": self.pol_offset_from_ned\
@@ -235,7 +238,8 @@ class Source:
        in zip(\
          (2.429e14, 1.805e14, 1.390e14), \
          map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")])\
-        )\
+        ) \
+       if twomass_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
       print " ", self.name
     except:
@@ -248,7 +252,7 @@ class Source:
       galex_lons = map(float, self.galex.array["dec"].data.tolist())
       galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
 
-      mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux != -999. and not math.isnan(e_bv) and e_bv != -999. # -999 indicates no data
+      mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux > 0 and not math.isnan(e_bv) and e_bv > 0 # -999 indicates no data
 
       for freq, flux_name, extinction in zip((1.963e15, 1.321e15), ("fuv_flux", "nuv_flux"), (lambda e_bv: 10**(.4*e_bv*8.24), lambda e_bv: 10**(.4*e_bv*(8.24-e_bv*0.67)))):
         galex_averages = dict(\
