@@ -150,7 +150,17 @@ class Source:
       print "  Can't find raw NED position data! (%s)" % self.name
 
   def parse_ned_sed(self, index):
-    """Picks out the frequency vs flux data and records them as data points."""            
+    """Picks out the frequency vs flux data and records them as data points."""
+    all_fields_filter_regexp = re.compile(""" # for finding not allowed patterns in all fields of ned sed output
+      ^line\\b # word line at start of field
+      |
+      ^1983ApJ\.\.\.272\.\.400H\\b # this ref code only at start of field
+      |
+      \\bmodel # word or prefix model anywhere in field
+      |
+      \\bcount\s+statistics\\b # phrase count statistics anywhere in field
+      """, re.VERBOSE | re.IGNORECASE)
+
     try:
       [self.points.append(DataPoint({\
          "index": index, \
@@ -167,11 +177,48 @@ class Source:
          "RM_err": self.RM_err, \
          "pol_offset_from_ned": self.pol_offset_from_ned\
         })) \
-       for freq, flux \
+       for freq, flux, line, passband \
        in zip(\
          map(float, self.ned_sed.array["Frequency"].data.tolist()), \
-         map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist())\
-        )\
+         map(float, self.ned_sed.array["NED Photometry Measurement"].data.tolist()), \
+         (map(str, line) for line in self.ned_sed.array.tolist()), \
+         map(str, self.ned_sed.array["Observed Passband"].data.tolist())\
+        ) \
+       if \
+         True not in (not not all_fields_filter_regexp.search(entry) for entry in line) \
+         and (\
+           re.search("(^|\s)\(SDSS\\b(?!\s+PSF\)(\s|$)) # in passband matches anything (including nothing) except for psf after sdss", passband, re.VERBOSE | re.IGNORECASE) \
+           if re.search("(^|\s)\(SDSS\\b # in passband matches sdss at start of field or after whitespace", passband, re.VERBOSE | re.IGNORECASE) \
+           else not re.search(""" # search passband for various not allowed patterns
+             \\b(
+             _K20
+             |
+             _14arcsec
+             |
+             _25
+             |
+             _26
+             |
+             HST
+             |
+             Spitzer
+             |
+             ISAAC
+             |
+             m_p
+             |
+             CIT
+             |
+             UKIRT
+             |
+             GALEX
+             )\\b
+             """, passband, re.VERBOSE | re.IGNORECASE)\
+          ) \
+         and not math.isnan(flux) \
+         and flux > 0 \
+         and not math.isnan(freq) \
+         and freq > 0\
       ].pop() # pop to trigger error if list empty
       print " ", self.name
     except:
