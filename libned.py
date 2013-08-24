@@ -126,7 +126,7 @@ class Source:
     # now we generate the plot output
     luminosity = lambda flux, extinction: 4*3.14159*(d_l**2)*flux*extinction*1e-26/(1+self.z)
     format_strings = {"NED": ", %.5e, , , ", "WISE": ", , %.5e, , ", "2MASS": ", , , %.5e, ", "GALEX": ", , , , %.5e"}
-    return "freq, NED, WISE, 2MASS, GALEX\n" + "\n".join("%.5e" % ((1+self.z)*point.freq) + format_strings[point.source] % luminosity(point.flux, point.extinction) for point in self.points)
+    return "freq NED WISE 2MASS GALEX\n" + "\n".join("%.5e" % ((1+self.z)*point.freq) + format_strings[point.source] % luminosity(point.flux, point.extinction) for point in self.points)
 
   def get_ned_position_votable(self):
     """Builds the correct URL and fetches the source's NED position votable.
