@@ -1,12 +1,15 @@
 #!/usr/bin/python2
 
-import libned, argparse, sys
+import libned, argparse, sys, os
 
 parser = argparse.ArgumentParser(description="Scripts to access NASA/IPAC Extragalactic Database (NED), Wide-Field Infrared Survey Explorer (WISE), Two Micron All Sky Survey (2MASS), and Galaxy Evolution Explorer (GALEX) online data.")
 parser.add_argument("input", nargs="?", type=argparse.FileType("rU"), default=sys.stdin, help="polarisation catalog or NED names input data (will take manual input if not specified)")
 parser.add_argument("-f", "--file", type=argparse.FileType("w"), default=sys.stdout, help="output filename")
-in_file = vars(parser.parse_args())["input"] # a file-like object
-out_file = vars(parser.parse_args())["file"] # a string of a filename
+parser.add_argument("-p", "--plot", metavar="DIR", type=str, help="plot mode (must specify directory for output data)")
+args = vars(parser.parse_args())
+in_file = args["input"] # a file-like object
+out_file = args["file"] # a file-like object
+plot_dir = args["plot"] # a string of a directory
 
 print "READING CONFIGURATION FILE ned.conf"
 try:
@@ -45,4 +48,17 @@ print
 print "RESULTS"
 for source in sources: print >> out_file, source
 print "OUTPUT WRITTEN TO %s" % out_file.name
-out_file.close()
+
+if plot_dir:
+  print
+  for source in sources:
+    try:
+      plot_file = open(os.path.join(plot_dir, source.name.replace(" ","").replace(os.sep, "") + ".dat"), "w")
+      print >> plot_file, source.plot_output()
+      plot_file.close()
+      print "%s PLOT OUTPUT WRITTEN TO %s" % (source.name, plot_file.name)
+    except:
+      print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.name
+print
+print "FINISHED"
+out_file.close() # close it at end since still need to print to stdout

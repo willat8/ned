@@ -1,3 +1,5 @@
+v1.4 (24 Aug 2013): Implemented all filtering and plot mode output.
+
 v1.3 (22 Aug 2013): Implemented GALEX parsing, filtering and output. Added command line switches.
 		    Added option for file output and output format customisation.
 		    To do:

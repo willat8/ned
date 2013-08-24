@@ -19,6 +19,7 @@ NED_NAME_REGEXP = re.compile(""" # assumes no leading or trailing white space
   (?P<name>\S+\s+\S+\s*\S*) # ned name assuming conventions at http://cdsweb.u-strasbg.fr/vizier/Dic/iau-spec.htx
   $
   """, re.VERBOSE)
+
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
 NED_SED_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-datasearch?search_type=Photometry&of=xml_all\
@@ -32,6 +33,11 @@ GALEX_SQL_QUERY = "SELECT TOP 100 p.objid, p.ra, p.dec, n.distance, p.band, p.fu
 FROM PhotoObjAll AS p, dbo.fGetNearbyObjEq(%(lat).5f, %(lon).5f, 0.2) AS n \
 WHERE p.objID=n.objID \
 ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
+
+O_M = 0.27 # mass density parameter
+O_Lambda = 0.73 # dark energy density parameter
+H_0 = 71 # hubble constant
+c = 299793 # speed of light
 
 class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
@@ -93,6 +99,33 @@ class Source:
 
   def __repr__(self):
     return "\n".join(map(repr, self.points))
+
+  def plot_output(self):
+    """Builds and formats output for plotting by a utility such as gnuplot"""
+    # we need to calculate the total line-of-sight comoving distance for this redshift
+    # D_C = c/H_0 * integral [0, z] dz/E(z)
+    # first we calculate the integral
+    # E(z) = sqrt( O_M(1+z)^3 + O_k(1+z)^2 + O_Lambda )
+    O_k = 1 - O_M - O_Lambda
+    num_intervals = 10000 # fineness of integration
+    partition = (x*self.z/num_intervals for x in xrange(num_intervals))
+
+    E = lambda z: math.sqrt(O_M*(1+z)**3 + O_k*(1+z)**2 + O_Lambda)
+    I = numpy.trapz([1/x for x in map(E, partition) if x is not 0.], dx=self.z/num_intervals)
+    D_C = c/H_0 * I
+
+    # assuming a flat universe the transverse comoving distance equals the radial comoving distance
+    D_M = D_C
+
+    # the luminosity distance is given by D_L = (1+z)D_M (in units of Mpc)
+    D_L = (1+self.z)*D_M
+
+    # converting to units of metres
+    d_l = 3.086e22*D_L
+
+    # now we generate the plot output
+    luminosity = lambda flux, extinction: 4*3.14159*(d_l**2)*flux*extinction*1e-26/(1+self.z)
+    return "\n".join("%.5e %.5e %s" % ((1+self.z)*point.freq, luminosity(point.flux, point.extinction), point.source) for point in self.points)
 
   def get_ned_position_votable(self):
     """Builds the correct URL and fetches the source's NED position votable.
