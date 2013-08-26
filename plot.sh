@@ -24,5 +24,8 @@ gnuplot <<EOF
   set format y "%L"
   set title "$source_name"
 
+  cutoff_freq = 1e15 # lowest uv freq
+  set arrow from cutoff_freq,graph(0,0) to cutoff_freq,graph(1,1) nohead linetype 0 # vertical dashed line at cutoff freq
+
   plot for [col=2:5] "$in_file" using 1:col 
 EOF
