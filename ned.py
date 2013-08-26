@@ -53,7 +53,7 @@ if plot_dir:
   print
   for source in sources:
     try:
-      plot_file = open(os.path.join(plot_dir, source.name.replace(" ","").replace(os.sep, "").replace(",","") + ".dat"), "w")
+      plot_file = open(os.path.join(plot_dir, source.name.replace(" ","").replace(os.sep, "") + ".dat"), "w")
       print >> plot_file, source.plot_output()
       plot_file.close()
       print "%s PLOT OUTPUT WRITTEN TO %s" % (source.name, plot_file.name)
