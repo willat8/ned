@@ -14,15 +14,14 @@ gnuplot <<EOF
   set term postscript enhanced color
   set output "$out_file"
   set fit logfile "$log_file"
+  set samples 1001 # high quality
 
   lower_cutoff = 10**14.8 # lowest uv freq
   upper_cutoff = 1e17 # highest uv freq
-  freq_filter(x) = (x>lower_cutoff && x<upper_cutoff) ? x : 1/0
   alpha = 0
   C = 0
   f(x) = alpha*x+C
-
-  fit f(x) "$in_file" using (log10(freq_filter(\$1))):(log10(\$2+\$3+\$4+\$5)) via alpha, C
+  fit [log10(lower_cutoff):log10(upper_cutoff)] f(x) "$in_file" using (log10(\$1)):(log10(\$2+\$3+\$4+\$5)) via alpha, C
 
   # the ionising photon rate is integral [lower_cutoff, inf] L_v/hv dv
   # where L_v is the luminosity at frequency v
@@ -47,5 +46,5 @@ gnuplot <<EOF
   set arrow from upper_cutoff,graph 0 to upper_cutoff,graph 1 nohead linetype 0 # vertical dashed line at upper cutoff freq
   set label gprintf("Ionising photon rate: %.1f", ion_rate) at graph 0.1,0.1
 
-  plot 10**f(log10(freq_filter(x))) title "UV fit", for [col=2:5] "$in_file" using 1:col 
+  plot 10**f(log10((lower_cutoff<x && x<upper_cutoff) ? x : 1/0)) title "UV fit", for [col=2:5] "$in_file" using 1:col # plot fit in between cutoffs only
 EOF
