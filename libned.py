@@ -8,10 +8,13 @@ POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white spac
   ^
   (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
   \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
-  \s+(?P<name>.+?) # ned name
-  \s+(?P<z>-?[0-9]+\.?[0-9]+) # z
-  \s+(?P<RM>-?[0-9]+\.?[0-9]+) # RM
-  \s+(?P<RM_err>-?[0-9]+\.?[0-9]+) # RM error
+  \s+"(?P<name>.*)" # ned name
+  \s+(?P<z>-?[0-9]+(\.?[0-9]*)?([eE][0-9]+)?) # z
+  \s+(?P<RM>-?[0-9]+(\.?[0-9]*)?) # RM
+  \s+(?P<RM_err>-?[0-9]+(\.?[0-9]*)?) # RM error
+  \s+(?P<RMM>-?[0-9]+(\.?[0-9]*)?) # RMM
+  \s+(?P<RMM_err>-?[0-9]+(\.?[0-9]*)?) # RMM error
+  \s+"(?P<nvis_id>.*)" # nvis id
   $
   """, re.VERBOSE)
 NED_NAME_REGEXP = re.compile(""" # assumes no leading or trailing white space
@@ -59,6 +62,9 @@ class DataPoint:
     self.extinction = 1. # default extinction value for all sources?
     self.RM = None
     self.RM_err = None
+    self.RMM = None
+    self.RMM_err = None
+    self.nvis_id = None
     self.pol_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in data.items()] # set proper values
