@@ -31,7 +31,8 @@ gnuplot <<EOF
   # note must have a < 0
   h = 6.62606957e-34 # planck constant
   ion_rate = (alpha<0) ? log10(-10**C/(alpha*h)*lower_cutoff**alpha) : NaN
-  print ion_rate
+  print "" # newline
+  print "Ionising photon rate (log10) for $source_name: ", ion_rate
 
   set title "$source_name"
   set logscale
@@ -42,8 +43,9 @@ gnuplot <<EOF
   set yrange[1e15:1e30]
   set format y "%L"
   set ylabel "Luminosity, log_{10}(L_{/Symbol-Oblique n}) [W Hz^{-1}]"
-  set arrow from lower_cutoff,graph(0,0) to lower_cutoff,graph(1,1) nohead linetype 0 # vertical dashed line at lower cutoff freq
-  set arrow from upper_cutoff,graph(0,0) to upper_cutoff,graph(1,1) nohead linetype 0 # vertical dashed line at upper cutoff freq
+  set arrow from lower_cutoff,graph 0 to lower_cutoff,graph 1 nohead linetype 0 # vertical dashed line at lower cutoff freq
+  set arrow from upper_cutoff,graph 0 to upper_cutoff,graph 1 nohead linetype 0 # vertical dashed line at upper cutoff freq
+  set label gprintf("Ionising photon rate: %.1f", ion_rate) at graph 0.1,0.1
 
   plot 10**f(log10(freq_filter(x))) title "UV fit", for [col=2:5] "$in_file" using 1:col 
 EOF
