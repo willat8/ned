@@ -15,14 +15,23 @@ gnuplot <<EOF
   set output "$out_file"
   set fit logfile "$log_file"
 
-  lower_cutoff = 1e15 # lowest uv freq
-  upper_cutoff = 1e17 $ highest uv freq
+  lower_cutoff = 10**14.8 # lowest uv freq
+  upper_cutoff = 1e17 # highest uv freq
   freq_filter(x) = (x>lower_cutoff && x<upper_cutoff) ? x : 1/0
-  m = 0
-  b = 0
-  f(x) = m*x+b
+  alpha = 0
+  C = 0
+  f(x) = alpha*x+C
 
-  fit f(x) "$in_file" using (log10(freq_filter(\$1))):(log10(\$2+\$3+\$4+\$5)) via m, b
+  fit f(x) "$in_file" using (log10(freq_filter(\$1))):(log10(\$2+\$3+\$4+\$5)) via alpha, C
+
+  # the ionising photon rate is integral [lower_cutoff, inf] L_v/hv dv
+  # where L_v is the luminosity at frequency v
+  # this simplifies to ionising photon rate = -10^C/ah * v^a
+  # where a is the spectral index (gradient of fit curve) and C is the intercept of the fit curve
+  # note must have a < 0
+  h = 6.62606957e-34 # planck constant
+  ion_rate = (alpha<0) ? log10(-10**C/(alpha*h)*lower_cutoff**alpha) : NaN
+  print ion_rate
 
   set title "$source_name"
   set logscale
