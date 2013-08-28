@@ -22,11 +22,12 @@ print
 print "GETTING AND ANALYSING INPUT DATA..."
 sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
 print
-print "DOWNLOADING NED DATA..."
+print "DOWNLOADING NED POSITION DATA..."
 [setattr(source, "ned_position", source.get_ned_position_votable()) for source in sources] # fetch ned position data
-[setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED POSITION DATA..."
 [source.parse_ned_position() for source in sources] # parse and store ned position data
+print "DOWNLOADING NED SED DATA..."
+[setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED SED DATA..."
 [source.parse_ned_sed(index+1) for index, source in enumerate(sources)] # parse and store ned sed data
 print

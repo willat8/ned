@@ -142,22 +142,34 @@ class Source:
   def get_ned_sed_votable(self):
     """Builds the correct URL and fetches the source's NED SED votable.
        Depends on NED name."""
-    return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.name))
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
+      return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.name))
+    except: return
 
   def get_wise_votable(self):
     """Builds the correct URL and fetches the source's WISE votable.
        Depends on NED position."""
-    return get_votable(WISE_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
+      return get_votable(WISE_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+    except: return
 
   def get_twomass_votable(self):
     """Builds the correct URL and fetches the source's 2MASS votable.
        Depends on NED position."""
-    return get_votable(TWOMASS_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
+      return get_votable(TWOMASS_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+    except: return
 
   def get_galex_votable(self):
     """Browses to the GALEX search page, sets the output format to votable and the correct SQL query,
        submits the form and finds the output xml which is then parsed to astropy votable and returned.
        Depends on NED position."""
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
+    except: return
     try:
       browser = mechanize.Browser()
       browser.open(GALEX_SEARCH_PAGE)
