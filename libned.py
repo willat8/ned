@@ -8,7 +8,7 @@ POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white spac
   ^
   (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
   \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
-  \s+"(?P<name>.*)" # ned name
+  \s+"(?P<name>.+)" # ned name
   \s+(?P<z>-?[0-9]+(\.?[0-9]*)?([eE][0-9]+)?) # z
   \s+(?P<RM>-?[0-9]+(\.?[0-9]*)?) # RM
   \s+(?P<RM_err>-?[0-9]+(\.?[0-9]*)?) # RM error
