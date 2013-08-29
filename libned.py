@@ -4,34 +4,14 @@
 
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy
 
-EXTENDED_POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
-  ^
-  (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
-  \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
-  \s+"(?P<name>.+)" # ned name
-  \s+(?P<z>-?[0-9]+(\.?[0-9]*)?([eE]-?[0-9]+)?) # z
-  \s+(?P<RM>-?[0-9]+(\.?[0-9]*)?) # RM
-  \s+(?P<RM_err>-?[0-9]+(\.?[0-9]*)?) # RM error
-  \s+(?P<RMM>-?[0-9]+(\.?[0-9]*)?) # RMM
-  \s+(?P<RMM_err>-?[0-9]+(\.?[0-9]*)?) # RMM error
-  \s+"(?P<nvis_id>.*)" # nvis id
-  $
-  """, re.VERBOSE)
-POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
-  ^
-  (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
-  \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
-  \s+(?P<name>.+?) # ned name
-  \s+(?P<z>-?[0-9]+(\.?[0-9]*)?) # z
-  \s+(?P<RM>-?[0-9]+(\.?[0-9]*)?) # RM
-  \s+(?P<RM_err>-?[0-9]+(\.?[0-9]*)?) # RM error
-  $
-  """, re.VERBOSE)
-NED_NAME_REGEXP = re.compile(""" # assumes no leading or trailing white space
-  ^
-  (?P<name>\S+\s+\S+\s*\S*) # ned name assuming conventions at http://cdsweb.u-strasbg.fr/vizier/Dic/iau-spec.htx
-  $
-  """, re.VERBOSE)
+input_regexp = ""
+KNOWN_FIELDS = {
+  "pol_lat": "-?[0-9]+\.?[0-9]+",
+  "pol_lon": "-?[0-9]+\.?[0-9]+",
+  "name": "[^\"]+?",
+  "z": "-?[0-9]+(\.?[0-9]*)?([eE]-?[0-9]+)?",
+  "nvis_id": "\"NVSS [^s\"]+\""
+ }
 
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
@@ -410,6 +390,21 @@ class Source:
     except:
       print "  Can't find raw GALEX data! (%s)" % self.name
 
+def build_input_regexp(input_string):
+  """Given the input string build a regexp to match against valid lines of data input"""
+  return re.compile(\
+    "^" + \
+    "\s+".join("\"?(?P<%s>%s)\"?" % (field, KNOWN_FIELDS.get(field,"\S+")) for field in input_string.split(" ")) + \
+    "$", \
+    re.IGNORECASE\
+   ) # assumes no leading or trailing white space
+
+def parse_line(line):
+  """Parses to a dictionary the data on a given line of input."""
+  try:
+    return input_regexp.match(line.strip()).groupdict() # errors if no match
+  except: return # skip line
+
 def get_votable(url):
   """Fetches from the web and returns data for a source, in an astropy votable."""
   print " ", url
@@ -421,11 +416,3 @@ def get_votable(url):
       return astropy.io.votable.parse_single_table(xml_file) # parse xml to astropy votable
   except:
     print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % url
-
-def parse_line(line):
-  """Parses to a dictionary the data on a given line of input."""
-  line = line.strip()
-  for regexp in (EXTENDED_POLARISATION_REGEXP, POLARISATION_REGEXP, NED_NAME_REGEXP): # check if polarisation data or ned names (order of matches matters)
-    try:
-      return regexp.match(line).groupdict() # errors if no match
-    except: continue # function evaluates false if never matches

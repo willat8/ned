@@ -14,6 +14,10 @@ plot_dir = args["plot"] # a string of a directory
 print "READING CONFIGURATION FILE ned.conf"
 config = ConfigParser.RawConfigParser()
 config.read("ned.conf")
+print "BUILDING INPUT REGEXP..."
+libned.input_regexp = libned.build_input_regexp(config.get("Format", "input"))
+print "INPUT REGEXP SET TO:"
+print libned.input_regexp.pattern
 libned.DataPoint.repr_format_string = config.get("Format", "output")
 print "OUTPUT FORMAT SET TO:"
 print libned.DataPoint.repr_format_string
