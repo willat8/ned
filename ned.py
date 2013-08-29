@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-import libned, argparse, sys, os
+import libned, argparse, sys, os, ConfigParser
 
 parser = argparse.ArgumentParser(description="Scripts to access NASA/IPAC Extragalactic Database (NED), Wide-Field Infrared Survey Explorer (WISE), Two Micron All Sky Survey (2MASS), and Galaxy Evolution Explorer (GALEX) online data.")
 parser.add_argument("input", nargs="?", type=argparse.FileType("rU"), default=sys.stdin, help="polarisation catalog or NED names input data (will take manual input if not specified)")
@@ -12,10 +12,9 @@ out_file = args["file"] # a file-like object
 plot_dir = args["plot"] # a string of a directory
 
 print "READING CONFIGURATION FILE ned.conf"
-try:
-  libned.DataPoint.repr_format_string = " ".join(line.rstrip("\n") for line in open("ned.conf", "rU") if line.lstrip() and line.lstrip()[0] != "#") # could upgrade this to config parse module in the future
-except:
-  print "COULD NOT READ CONFIGURATION FILE ned.conf"
+config = ConfigParser.RawConfigParser()
+config.read("ned.conf")
+libned.DataPoint.repr_format_string = config.get("Format", "output")
 print "OUTPUT FORMAT SET TO:"
 print libned.DataPoint.repr_format_string
 print
