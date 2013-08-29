@@ -13,11 +13,14 @@ to install all of the dependencies.
 Usage:
  $ chmod +x ned.py
  $ ./ned.py data.dat
-where data.dat is a newline-separated list of Polarisation Catalog entries or NED names.
+where data.dat is a newline-separated list of custom input data (with format specified in ned.conf).
 Sample dat files are provided.
 
 The output format can be specified in the ned.conf configuration file.
 The syntax is a normal python format string. See ned.conf for the available data fields.
+
+The input format can also be specified in ned.conf.
+The syntax is a space separated sequence of field names. See ned.conf for automatically recognised field names.
 
 Note that running the script without any file input:
  $ ./ned.py
@@ -31,7 +34,7 @@ then results will be written to that file. Otherwise results are displayed.
 To output a single dat file per input source in plot-ready format use:
  $ ./ned.py --plot dirname data.dat
 where dirname is the output directory for the dat files. The output format is:
-<rest-frame freq> <luminosity in W/Hz> <data source name>
+<rest-frame freq> <NED luminosity in W/Hz> <WISE luminosity in W/Hz> <2MASS luminosity in W/Hz> <GALEX luminosity in W/Hz>
 
 For more information refer to:
  $ ./ned.py --help
