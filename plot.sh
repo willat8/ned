@@ -18,6 +18,7 @@ gnuplot <<EOF
 
   lower_cutoff = 10**14.8 # lowest uv freq
   upper_cutoff = 1e17 # highest uv freq
+  lowest_ionisation_frequency = 3.29e15
   alpha = 0
   C = 0
   f(x) = alpha*x+C
@@ -29,7 +30,7 @@ gnuplot <<EOF
   # where a is the spectral index (gradient of fit curve) and C is the intercept of the fit curve
   # note must have a < 0
   h = 6.62606957e-34 # planck constant
-  ion_rate = (alpha<0) ? log10(-10**C/(alpha*h)*lower_cutoff**alpha) : NaN
+  ion_rate = (alpha<0) ? log10(-10**C/(alpha*h)*lowest_ionisation_frequency**alpha) : NaN
   print "" # newline
   print "Ionising photon rate (log10) for $source_name: ", ion_rate
 
