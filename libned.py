@@ -10,7 +10,7 @@ KNOWN_FIELDS = {
   "pol_lon": "-?[0-9]+\.?[0-9]+",
   "name": "[^\"]+?",
   "z": "-?[0-9]+(\.?[0-9]*)?([eE]-?[0-9]+)?",
-  "nvis_id": "\"NVSS [^s\"]+\""
+  "nvis_id": "NVSS [^\s\"]+"
  }
 
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
