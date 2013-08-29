@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 # Pass in a plot-ready .dat file and gnuplot will generate a plot in postscript format.
 # Output plot will be stored in the same directory as the input .dat file.
 
