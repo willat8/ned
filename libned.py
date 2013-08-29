@@ -394,10 +394,10 @@ def build_input_regexp(input_string):
   """Given the input string build a regexp to match against valid lines of data input"""
   return re.compile(\
     "^" + \
-    "\s+".join("\"?(?P<%s>%s)\"?" % (field, KNOWN_FIELDS.get(field,"\S+")) for field in input_string.split(" ")) + \
+    "\s+".join("\"?(?P<%s>%s)\"?" % (field, KNOWN_FIELDS.get(field,"[^\s\"]*")) for field in input_string.split(" ")) + \
     "$", \
     re.IGNORECASE\
-   ) # assumes no leading or trailing white space
+   ) # assumes no leading or trailing white space, unrecognised fields are strings, optional quotation marks allowed around all fields
 
 def parse_line(line):
   """Parses to a dictionary the data on a given line of input."""
