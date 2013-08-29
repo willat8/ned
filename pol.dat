@@ -1,4 +1,4 @@
-RA (deg)     Dec (deg)     NED Object Name    redshift       RM     RMerror   RMM  RMMerror   NVIS ID
+RA (deg)     Dec (deg)     NED Object Name    redshift       RM     RMerror
 
-  1.59417    -0.07364     "FBQS J0006-0004"    1.037         22.5     3.3     0     0        ""
-197.16317    -9.84211     "PKS 1306-09"        0.46685      -27.3     2.0     0     0        ""
+  1.59417    -0.07364      FBQS J0006-0004     1.037         22.5     3.3
+197.16317    -9.84211      PKS 1306-09         0.46685      -27.3     2.0

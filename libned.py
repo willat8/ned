@@ -4,7 +4,7 @@
 
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy
 
-POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
+EXTENDED_POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
   ^
   (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
   \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
@@ -15,6 +15,16 @@ POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white spac
   \s+(?P<RMM>-?[0-9]+(\.?[0-9]*)?) # RMM
   \s+(?P<RMM_err>-?[0-9]+(\.?[0-9]*)?) # RMM error
   \s+"(?P<nvis_id>.*)" # nvis id
+  $
+  """, re.VERBOSE)
+POLARISATION_REGEXP = re.compile(""" # assumes no leading or trailing white space
+  ^
+  (?P<pol_lat>-?[0-9]+\.?[0-9]+) # lat
+  \s+(?P<pol_lon>-?[0-9]+\.?[0-9]+) # lon
+  \s+(?P<name>.+?) # ned name
+  \s+(?P<z>-?[0-9]+(\.?[0-9]*)?) # z
+  \s+(?P<RM>-?[0-9]+(\.?[0-9]*)?) # RM
+  \s+(?P<RM_err>-?[0-9]+(\.?[0-9]*)?) # RM error
   $
   """, re.VERBOSE)
 NED_NAME_REGEXP = re.compile(""" # assumes no leading or trailing white space
@@ -415,7 +425,7 @@ def get_votable(url):
 def parse_line(line):
   """Parses to a dictionary the data on a given line of input."""
   line = line.strip()
-  for regexp in (POLARISATION_REGEXP, NED_NAME_REGEXP): # check if polarisation data or ned names (order of matches matters)
+  for regexp in (EXTENDED_POLARISATION_REGEXP, POLARISATION_REGEXP, NED_NAME_REGEXP): # check if polarisation data or ned names (order of matches matters)
     try:
       return regexp.match(line).groupdict() # errors if no match
     except: continue # function evaluates false if never matches
