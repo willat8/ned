@@ -15,12 +15,43 @@ print "READING CONFIGURATION FILE ned.conf"
 config = ConfigParser.RawConfigParser()
 config.read("ned.conf")
 print "BUILDING INPUT REGEXP..."
-libned.input_regexp = libned.build_input_regexp(config.get("Format", "input"))
+libned.input_fields = config.get("Format", "input").strip().split()
+libned.input_regexp = libned.build_input_regexp()
 print "INPUT REGEXP SET TO:"
 print libned.input_regexp.pattern
+print "VALIDATING OUTPUT FORMAT..."
 libned.DataPoint.repr_format_string = config.get("Format", "output")
-print "OUTPUT FORMAT SET TO:"
-print libned.DataPoint.repr_format_string
+valid_output_fields = {\
+  "index": -1, \
+  "name": None, \
+  "ned_name": None, \
+  "nvss_id": None, \
+  "z": float("inf"), \
+  "num": -1, \
+  "freq": float("inf"), \
+  "flux": float("inf"), \
+  "data_source": None, \
+  "flag": 'a', \
+  "lat": float("inf"), \
+  "lon": float("inf"), \
+  "ned_lat": float("inf"), \
+  "ned_lon": float("inf"), \
+  "input_lat": float("inf"), \
+  "input_lon": float("inf"), \
+  "offset_from_ned": float("inf"), \
+  "input_offset_from_ned": float("inf"), \
+  "extinction": 1.\
+ }
+for input_field in libned.input_fields: # add custom input fields to valid output fields
+  if input_field not in valid_output_fields:
+    valid_output_fields[input_field] = ""
+try:
+  libned.DataPoint.repr_format_string % valid_output_fields
+except:
+  raise Exception("Mismatch between output and input fields. Check ned.conf.")
+else:
+  print "OUTPUT FORMAT SET TO:"
+  print libned.DataPoint.repr_format_string
 print
 print "GETTING AND ANALYSING INPUT DATA..."
 sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
@@ -57,12 +88,12 @@ if plot_dir:
   print
   for source in sources:
     try:
-      plot_file = open(os.path.join(plot_dir, source.name.replace(" ","").replace(os.sep, "") + ".dat"), "w")
+      plot_file = open(os.path.join(plot_dir, source.unique_name().replace(" ","").replace(os.sep, "") + ".dat"), "w")
       print >> plot_file, source.plot_output()
       plot_file.close()
-      print "%s PLOT OUTPUT WRITTEN TO %s" % (source.name, plot_file.name)
+      print "%s PLOT OUTPUT WRITTEN TO %s" % (source.unique_name(), plot_file.name)
     except:
-      print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.name
+      print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.unique_name()
 print
 print "FINISHED"
 out_file.close() # close it at end since still need to print to stdout

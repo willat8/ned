@@ -4,14 +4,15 @@
 
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy
 
-input_regexp = ""
-KNOWN_FIELDS = {
-  "pol_lat": "-?[0-9]+\.?[0-9]+",
-  "pol_lon": "-?[0-9]+\.?[0-9]+",
-  "name": "[^\"]+?",
-  "z": "-?[0-9]+(\.?[0-9]*)?([eE]-?[0-9]+)?",
-  "nvis_id": "NVSS [^\s\"]+"
- }
+KNOWN_INPUT_FIELDS = {
+  "input_lat": "(-?[0-9]+(\.?[0-9]+)?)?",
+  "input_lon": "(-?[0-9]+(\.?[0-9]+)?)?",
+  "ned_name": ".*?",
+  "z": "(-?[0-9]+(\.?[0-9]+)?([eE]-?[0-9]+)?)?",
+  "nvss_id": ".*?"
+ } # all should optionally match nothing for the case of empty fields
+input_regexp = None
+input_fields = [] # user-specified input fields
 
 NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch?of=xml_posn\
 &objname=%s"
@@ -36,32 +37,25 @@ class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
   repr_format_string = ""
 
-  def __init__(self, data):
-    # initialise default values with correct types for output string
+  def __init__(self, source, data): # source refers to the source the data point is describing
+    # initialise point-specific default values with correct types for output string
     self.index = -1
-    self.name = None
-    self.z = float("inf")
     self.num = -1
     self.freq = float("inf")
     self.flux = float("inf")
-    self.source = None # refers to the data source name
+    self.data_source = None # refers to the data source name
     self.flag = 'a'
     self.lat = float("inf")
     self.lon = float("inf")
     self.offset_from_ned = float("inf")
     self.extinction = 1. # default extinction value for all sources?
-    self.RM = None
-    self.RM_err = None
-    self.RMM = None
-    self.RMM_err = None
-    self.nvis_id = None
-    self.pol_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in data.items()] # set proper values
+    [setattr(self, key, value) for key, value in vars(source).items() if key not in vars(self)] # set any missing values with their source-wide defaults
 
   def __repr__(self):
     """Formats the frequency vs flux data for a space-separated .dat file given a user-specified format string."""
-    return self.repr_format_string % vars(self)
+    return self.repr_format_string % vars(self) # only includes instance variables
 
 class Source:
   """Instances of this class represent extragalactic objects."""
@@ -77,27 +71,26 @@ class Source:
     self.galex = None
 
     # common for all data points for this source
-    self.name = None
+    self.ned_name = None
+    self.nvss_id = None
+    self.z = float("inf")
     self.ned_lat = float("inf")
     self.ned_lon = float("inf")
-    self.z = float("inf")
-    self.RM = None
-    self.RM_err = None
-    self.pol_lat = float("inf")
-    self.pol_lon = float("inf")
-    self.pol_offset_from_ned = float("inf")
+    self.input_lat = float("inf")
+    self.input_lon = float("inf")
+    self.input_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
-    self.pol_lat = float(self.pol_lat) # fix up types
-    self.pol_lon = float(self.pol_lon) # fix up types
+    self.input_lat = float(self.input_lat) # fix up types
+    self.input_lon = float(self.input_lon) # fix up types
     self.z = float(self.z) # fix up types
-    print "  Recognised source", self.name
+    print "  Recognised source", self.unique_name()
 
   def __repr__(self):
     return "\n".join(map(repr, self.points))
 
   def plot_output(self):
-    """Builds and formats output for plotting by a utility such as gnuplot"""
+    """Builds and formats output for plotting by a utility such as gnuplot."""
     # we need to calculate the total line-of-sight comoving distance for this redshift
     # D_C = c/H_0 * integral [0, z] dz/E(z)
     # first we calculate the integral
@@ -124,48 +117,68 @@ class Source:
     format_strings = {"NED": "%.5e 0 0 0", "WISE": "0 %.5e 0 0", "2MASS": "0 0 %.5e 0", "GALEX": "0 0 0 %.5e"}
     return "freq NED WISE 2MASS GALEX\n" + "\n".join("%.5e " % ((1+self.z)*point.freq) + format_strings[point.source] % luminosity(point.flux, point.extinction) for point in self.points)
 
+  def search_lat(self):
+    """Returns the NED latitude if it exists, otherwise returns the input-provided latitude."""
+    return self.ned_lat if self.ned_lat else self.input_lat
+
+  def search_lon(self):
+    """Returns the NED longitude if it exists, otherwise returns the input-provided longitude."""
+    return self.ned_lon if self.ned_lon else self.input_lon
+
+  def unique_name(self):
+    """Returns a NED name if it exists, otherwise returns a name constructed with the input-provided coordinates"""
+    return self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon))
+
   def get_ned_position_votable(self):
     """Builds the correct URL and fetches the source's NED position votable.
        Depends on NED name."""
-    return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.name))
+    if self.ned_name:
+      return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.ned_name))
+    if self.nvss_id:
+      return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.nvss_id)) # if no ned name search with nvss id
+    return
 
   def get_ned_sed_votable(self):
     """Builds the correct URL and fetches the source's NED SED votable.
        Depends on NED name."""
     try:
-      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
-      return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.name))
-    except: return
+      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
+      if self.ned_name:
+        return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.ned_name))
+      if self.nsis_id:
+        return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.nvss_id))
+    except: return # return if error
+    else: return # return if no ned name and nvss id
 
   def get_wise_votable(self):
     """Builds the correct URL and fetches the source's WISE votable.
-       Depends on NED position."""
+       Depends on position."""
     try:
-      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
-      return get_votable(WISE_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
+      return get_votable(WISE_SEARCH_PATH % {"lat": self.search_lat(), "lon": self.search_lon()})
     except: return
 
   def get_twomass_votable(self):
     """Builds the correct URL and fetches the source's 2MASS votable.
-       Depends on NED position."""
+       Depends on position."""
     try:
-      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
-      return get_votable(TWOMASS_SEARCH_PATH % {"lat": self.ned_lat, "lon": self.ned_lon})
+      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
+      return get_votable(TWOMASS_SEARCH_PATH % {"lat": self.search_lat(), "lon": self.search_lon()})
     except: return
 
   def get_galex_votable(self):
     """Browses to the GALEX search page, sets the output format to votable and the correct SQL query,
        submits the form and finds the output xml which is then parsed to astropy votable and returned.
-       Depends on NED position."""
+       Depends on position."""
     try:
-      int(self.ned_lat) + int(self.ned_lon) # will error if inf or nan
+      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
     except: return
     try:
       browser = mechanize.Browser()
       browser.open(GALEX_SEARCH_PAGE)
       browser.select_form(nr=0) # assume only one form on the page
 
-      browser.form["_ctl10:QueryTextbox"] = GALEX_SQL_QUERY % {"lat": self.ned_lat, "lon": self.ned_lon}
+      browser.form["_ctl10:QueryTextbox"] = GALEX_SQL_QUERY % {"lat": self.search_lat(), "lon": self.search_lon()}
       browser.form["_ctl10:ofmt"] = ["VOT"] # set the output to votable xml
 
       response = browser.submit() # send off the modified form
@@ -186,10 +199,10 @@ class Source:
     try:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
-      self.pol_offset_from_ned = math.hypot(self.ned_lat-self.pol_lat, self.ned_lon-self.pol_lon)*3600 # will be set if above is successful
-      print " ", self.name
+      self.input_offset_from_ned = math.hypot(self.ned_lat-self.input_lat, self.ned_lon-self.input_lon)*3600 # will be set if above is successful
+      print " ", self.ned_name if self.ned_name else self.nvss_id
     except:
-      print "  Can't find raw NED position data! (%s)" % self.name
+      print "  Can't find raw NED position data! (%s)" % self.unique_name()
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -204,20 +217,16 @@ class Source:
       """, re.VERBOSE | re.IGNORECASE)
 
     try:
-      [self.points.append(DataPoint({\
+      [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": self.name.replace(" ",""), \
-         "z": self.z, \
+         "name": (self.ned_name if self.ned_name else self.nvss_id).replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
-         "source": "NED", \
+         "data_source": "NED", \
          "lat": self.ned_lat, \
          "lon": self.ned_lon, \
-         "offset_from_ned": 0., \
-         "RM": self.RM, \
-         "RM_err": self.RM_err, \
-         "pol_offset_from_ned": self.pol_offset_from_ned\
+         "offset_from_ned": 0.\
         })) \
        for freq, flux, line, passband \
        in zip(\
@@ -262,9 +271,9 @@ class Source:
          and not math.isnan(freq) \
          and freq > 0\
       ].pop() # pop to trigger error if list empty
-      print " ", self.name
+      print " ", self.ned_name if self.ned_name else self.nvss_id
     except:
-      print "  Can't find raw NED SED data! (%s)" % self.name
+      print "  Can't find raw NED SED data! (%s)" % self.unique_name()
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -276,20 +285,16 @@ class Source:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
       wise_offset = math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600
-      [self.points.append(DataPoint({\
+      [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": self.name.replace(" ",""), \
-         "z": self.z, \
+         "name": self.unique_name().replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
-         "source": "WISE", \
+         "data_source": "WISE", \
          "lat": wise_lat, \
          "lon": wise_lon, \
-         "offset_from_ned": wise_offset, \
-         "RM": self.RM, \
-         "RM_err": self.RM_err, \
-         "pol_offset_from_ned": self.pol_offset_from_ned\
+         "offset_from_ned": wise_offset\
         })) \
        for freq, flux \
        in zip(\
@@ -298,9 +303,9 @@ class Source:
         ) \
        if wise_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.name
+      print " ", self.unique_name()
     except:
-      print "  Can't find raw WISE data! (%s)" % self.name
+      print "  Can't find raw WISE data! (%s)" % self.unique_name()
 
   def parse_twomass(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -308,20 +313,16 @@ class Source:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
       twomass_offset = math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600
-      [self.points.append(DataPoint({\
+      [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": self.name.replace(" ",""), \
-         "z": self.z, \
+         "name": self.unique_name().replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
-         "source": "2MASS", \
+         "data_source": "2MASS", \
          "lat": twomass_lat, \
          "lon": twomass_lon, \
-         "offset_from_ned": twomass_offset, \
-         "RM": self.RM, \
-         "RM_err": self.RM_err, \
-         "pol_offset_from_ned": self.pol_offset_from_ned\
+         "offset_from_ned": twomass_offset\
         })) \
        for freq, flux \
        in zip(\
@@ -330,9 +331,9 @@ class Source:
         ) \
        if twomass_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.name
+      print " ", self.unique_name()
     except:
-      print "  Can't find raw 2MASS data! (%s)" % self.name
+      print "  Can't find raw 2MASS data! (%s)" % self.unique_name()
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -363,46 +364,60 @@ class Source:
          ) # only wanted data remains
 
         try:
-          self.points.append(DataPoint({\
+          self.points.append(DataPoint(self, {\
             key: value for key, value in (\
               ("index", index), \
-              ("name", self.name.replace(" ","")), \
-              ("z", self.z), \
+              ("name", self.unique_name().replace(" ","")), \
               ("num", len(self.points)+1), \
               ("freq", freq), \
               ("flux", galex_averages["flux"]/1e6), \
-              ("source", "GALEX"), \
+              ("data_source", "GALEX"), \
               ("flag", 'm'*(not not len(galex_offsets_from_ned) > 1)), \
               ("lat", galex_averages["lat"]), \
               ("lon", galex_averages["lon"]), \
               ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
-              ("extinction", extinction(galex_averages["e_bv"])), \
-              ("RM", self.RM), \
-              ("RM_err", self.RM_err), \
-              ("pol_offset_from_ned", self.pol_offset_from_ned)\
+              ("extinction", extinction(galex_averages["e_bv"]))
              )
             if not (key == "flag" and not value)\
            })) # don't include flag if not changed from default
         except: pass # keep going with the loop
 
       galex_offsets_from_ned.pop() # will error if empty
-      print " ", self.name # successfully found at least some data
+      print " ", self.unique_name() # successfully found at least some data
     except:
-      print "  Can't find raw GALEX data! (%s)" % self.name
+      print "  Can't find raw GALEX data! (%s)" % self.unique_name()
 
-def build_input_regexp(input_string):
-  """Given the input string build a regexp to match against valid lines of data input"""
-  return re.compile(\
-    "^" + \
-    "\s+".join("\"?(?P<%s>%s)\"?" % (field, KNOWN_FIELDS.get(field,"[^\s\"]*")) for field in input_string.split(" ")) + \
-    "$", \
-    re.IGNORECASE\
-   ) # assumes no leading or trailing white space, unrecognised fields are strings, optional quotation marks allowed around all fields
+def build_input_regexp():
+  """Given the input string build a regexp to match against valid lines of data input."""
+  quotation_mark_match_names = {}
+  for input_field in input_fields: # generate non-clashing ids to be used for quotation matches
+    suffix = 0
+    while "%s_quotation_mark%d" % (input_field, suffix) in input_fields:
+      suffix+=1
+    quotation_mark_match_names[input_field] = "%s_quotation_mark%d" % (input_field, suffix)
+  try:
+    # assumes no leading or trailing white space and not a comment
+    # unrecognised fields are strings with no whitespace
+    # optional quotation marks allowed around all (possibly empty) fields
+    return re.compile(\
+      "^" + \
+      "\s+".join(\
+        "(?P<%(quotation_mark_match_name)s>\")?(?P<%(input_field)s>%(pattern)s)(?(%(quotation_mark_match_name)s)\")" % \
+          {"quotation_mark_match_name": quotation_mark_match_names[input_field], "input_field": input_field, "pattern": KNOWN_INPUT_FIELDS.get(input_field, "\S*?")} \
+        for input_field \
+        in input_fields\
+       ) + \
+      "$", \
+      re.IGNORECASE\
+     )
+  except:
+    print "Unable to build input regexp!"
 
 def parse_line(line):
   """Parses to a dictionary the data on a given line of input."""
   try:
-    return input_regexp.match(line.strip()).groupdict() # errors if no match
+    1/line.find("#") # errors if hash at beginning of line
+    return {key: value for key, value in input_regexp.match(line.strip()).groupdict().items() if value and (key in input_fields)} # errors if no match, filters blanks
   except: return # skip line
 
 def get_votable(url):
