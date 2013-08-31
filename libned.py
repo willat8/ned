@@ -127,7 +127,7 @@ class Source:
     return self.ned_lon if self.ned_lon else self.input_lon
 
   def unique_name(self):
-    """Returns a NED name if it exists, otherwise returns a name constructed with the input-provided coordinates"""
+    """Returns a NED name if it exists, otherwise returns a name constructed with the input-provided coordinates."""
     return self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon))
 
   def get_ned_position_votable(self):
