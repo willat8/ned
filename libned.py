@@ -40,6 +40,7 @@ class DataPoint:
   def __init__(self, source, data): # source refers to the source the data point is describing
     # initialise point-specific default values with correct types for output string
     self.index = -1
+    self.name = None
     self.num = -1
     self.freq = float("inf")
     self.flux = float("inf")
