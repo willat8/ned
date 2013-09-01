@@ -83,9 +83,9 @@ class Source:
     self.input_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
-    self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
     self.input_lat = float(self.input_lat) # fix up types
     self.input_lon = float(self.input_lon) # fix up types
+    self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
     self.z = float(self.z) # fix up types
     print "  Recognised source", self.name
 
