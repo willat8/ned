@@ -123,11 +123,19 @@ class Source:
 
   def search_lat(self):
     """Returns the NED latitude if it exists, otherwise returns the input-provided latitude."""
-    return self.ned_lat if self.ned_lat else self.input_lat
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if either are nan or inf
+      return self.ned_lat
+    except:
+      return self.input_lat
 
   def search_lon(self):
     """Returns the NED longitude if it exists, otherwise returns the input-provided longitude."""
-    return self.ned_lon if self.ned_lon else self.input_lon
+    try:
+      int(self.ned_lat) + int(self.ned_lon) # will error if either are nan or inf
+      return self.ned_lon
+    except:
+      return self.input_lon
 
   def get_and_parse_ned_position(self):
     """Builds the correct URL and fetches and parses the source's NED position votable.
