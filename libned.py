@@ -40,7 +40,6 @@ class DataPoint:
   def __init__(self, source, data): # source refers to the source the data point is describing
     # initialise point-specific default values with correct types for output string
     self.index = -1
-    self.name = None
     self.num = -1
     self.freq = float("inf")
     self.flux = float("inf")
@@ -53,6 +52,7 @@ class DataPoint:
 
     [setattr(self, *entry) for entry in data.items()] # set proper values
     [setattr(self, key, value) for key, value in vars(source).items() if key not in vars(self)] # set any missing values with their source-wide defaults
+    self.name = self.name.replace(" ","") # remove spaces to make output easier to parse
 
   def __repr__(self):
     """Formats the frequency vs flux data for a space-separated .dat file given a user-specified format string."""
@@ -72,6 +72,7 @@ class Source:
     self.galex = None
 
     # common for all data points for this source
+    self.name = None
     self.ned_name = None
     self.nvss_id = None
     self.z = float("inf")
@@ -82,10 +83,11 @@ class Source:
     self.input_offset_from_ned = float("inf")
 
     [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
+    self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
     self.input_lat = float(self.input_lat) # fix up types
     self.input_lon = float(self.input_lon) # fix up types
     self.z = float(self.z) # fix up types
-    print "  Recognised source", self.unique_name()
+    print "  Recognised source", self.name
 
   def __repr__(self):
     return "\n".join(map(repr, self.points))
@@ -125,10 +127,6 @@ class Source:
   def search_lon(self):
     """Returns the NED longitude if it exists, otherwise returns the input-provided longitude."""
     return self.ned_lon if self.ned_lon else self.input_lon
-
-  def unique_name(self):
-    """Returns a NED name if it exists, otherwise returns a name constructed with the input-provided coordinates."""
-    return self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon))
 
   def get_ned_position_votable(self):
     """Builds the correct URL and fetches the source's NED position votable.
@@ -201,9 +199,9 @@ class Source:
       for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
         setattr(self, key, float(self.ned_position.array[name].data.item()))
       self.input_offset_from_ned = math.hypot(self.ned_lat-self.input_lat, self.ned_lon-self.input_lon)*3600 # will be set if above is successful
-      print " ", self.ned_name if self.ned_name else self.nvss_id
+      print " ", self.name
     except:
-      print "  Can't find raw NED position data! (%s)" % self.unique_name()
+      print "  Can't find raw NED position data! (%s)" % self.name
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -220,7 +218,6 @@ class Source:
     try:
       [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": (self.ned_name if self.ned_name else self.nvss_id).replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
@@ -272,9 +269,9 @@ class Source:
          and not math.isnan(freq) \
          and freq > 0\
       ].pop() # pop to trigger error if list empty
-      print " ", self.ned_name if self.ned_name else self.nvss_id
+      print " ", self.name
     except:
-      print "  Can't find raw NED SED data! (%s)" % self.unique_name()
+      print "  Can't find raw NED SED data! (%s)" % self.name
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -288,7 +285,6 @@ class Source:
       wise_offset = math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": self.unique_name().replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
@@ -304,9 +300,9 @@ class Source:
         ) \
        if wise_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.unique_name()
+      print " ", self.name
     except:
-      print "  Can't find raw WISE data! (%s)" % self.unique_name()
+      print "  Can't find raw WISE data! (%s)" % self.name
 
   def parse_twomass(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -316,7 +312,6 @@ class Source:
       twomass_offset = math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
-         "name": self.unique_name().replace(" ",""), \
          "num": len(self.points)+1, \
          "freq": freq, \
          "flux": flux, \
@@ -332,9 +327,9 @@ class Source:
         ) \
        if twomass_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.unique_name()
+      print " ", self.name
     except:
-      print "  Can't find raw 2MASS data! (%s)" % self.unique_name()
+      print "  Can't find raw 2MASS data! (%s)" % self.name
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -368,7 +363,6 @@ class Source:
           self.points.append(DataPoint(self, {\
             key: value for key, value in (\
               ("index", index), \
-              ("name", self.unique_name().replace(" ","")), \
               ("num", len(self.points)+1), \
               ("freq", freq), \
               ("flux", galex_averages["flux"]/1e6), \
@@ -384,9 +378,9 @@ class Source:
         except: pass # keep going with the loop
 
       galex_offsets_from_ned.pop() # will error if empty
-      print " ", self.unique_name() # successfully found at least some data
+      print " ", self.name # successfully found at least some data
     except:
-      print "  Can't find raw GALEX data! (%s)" % self.unique_name()
+      print "  Can't find raw GALEX data! (%s)" % self.name
 
 def build_input_regexp():
   """Given the input string build a regexp to match against valid lines of data input."""

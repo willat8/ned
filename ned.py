@@ -88,12 +88,12 @@ if plot_dir:
   print
   for source in sources:
     try:
-      plot_file = open(os.path.join(plot_dir, source.unique_name().replace(" ","").replace(os.sep, "") + ".dat"), "w")
+      plot_file = open(os.path.join(plot_dir, source.name.replace(" ","").replace(os.sep, "") + ".dat"), "w")
       print >> plot_file, source.plot_output()
       plot_file.close()
-      print "%s PLOT OUTPUT WRITTEN TO %s" % (source.unique_name(), plot_file.name)
+      print "%s PLOT OUTPUT WRITTEN TO %s" % (source.name, plot_file.name)
     except:
-      print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.unique_name()
+      print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.name
 print
 print "FINISHED"
 out_file.close() # close it at end since still need to print to stdout
