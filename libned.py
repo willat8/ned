@@ -70,6 +70,7 @@ class Source:
     self.wise = None
     self.twomass = None
     self.galex = None
+    self.search_name = None
 
     # common for all data points for this source
     self.name = None
@@ -87,7 +88,7 @@ class Source:
     self.input_lon = float(self.input_lon) # fix up types
     self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
     self.z = float(self.z) # fix up types
-    print "  Recognised source", self.name
+    print "  Recognised source:", self.name
 
   def __repr__(self):
     return "\n".join(map(repr, self.points))
@@ -128,26 +129,31 @@ class Source:
     """Returns the NED longitude if it exists, otherwise returns the input-provided longitude."""
     return self.ned_lon if self.ned_lon else self.input_lon
 
-  def get_ned_position_votable(self):
-    """Builds the correct URL and fetches the source's NED position votable.
-       Depends on NED name."""
-    if self.ned_name:
-      return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.ned_name))
-    if self.nvss_id:
-      return get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(self.nvss_id)) # if no ned name search with nvss id
-    return
+  def get_and_parse_ned_position(self):
+    """Builds the correct URL and fetches and parses the source's NED position votable.
+       Records the J2000.0 equatorial latitude/longitude (decimal degrees).
+       Depends on NED name or NVSS ID."""
+    for search_name in (self.ned_name, self.nvss_id): # determine which name alternative between ned name and nvss id should be used
+      if not search_name: # try the other name if this one isn't specified
+        continue
+      self.ned_position = get_votable(NED_POSITION_SEARCH_PATH % urllib.quote_plus(search_name))
+      try:
+        for key, name in (("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")):
+          setattr(self, key, float(self.ned_position.array[name].data.item()))
+        self.search_name = search_name # will be set if above is successful
+        self.input_offset_from_ned = math.hypot(self.ned_lat-self.input_lat, self.ned_lon-self.input_lon)*3600 # will be set if above is successful
+        print "  Found NED position data:", self.name
+        return # don't continue with the loop
+      except:
+        continue # try again using nvss id
+    print "  Can't find NED position:", self.name
 
   def get_ned_sed_votable(self):
     """Builds the correct URL and fetches the source's NED SED votable.
-       Depends on NED name."""
-    try:
-      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
-      if self.ned_name:
-        return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.ned_name))
-      if self.nsis_id:
-        return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.nvss_id))
-    except: return # return if error
-    else: return # return if no ned name and nvss id
+       Depends on NED name or NVSS ID."""
+    if self.search_name: # check if ned recognises the provided ned name
+      return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.search_name))
+    return
 
   def get_wise_votable(self):
     """Builds the correct URL and fetches the source's WISE votable.
@@ -192,16 +198,6 @@ class Source:
       return get_votable(url)
     except:
       print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % GALEX_SEARCH_PAGE
-
-  def parse_ned_position(self):
-    """Picks out the J2000.0 equatorial latitude/longitude (decimal degrees) and records them."""
-    try:
-      for key, name in [("ned_lat", "pos_ra_equ_J2000_d"), ("ned_lon", "pos_dec_equ_J2000_d")]:
-        setattr(self, key, float(self.ned_position.array[name].data.item()))
-      self.input_offset_from_ned = math.hypot(self.ned_lat-self.input_lat, self.ned_lon-self.input_lon)*3600 # will be set if above is successful
-      print " ", self.name
-    except:
-      print "  Can't find raw NED position data! (%s)" % self.name
 
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -269,14 +265,14 @@ class Source:
          and not math.isnan(freq) \
          and freq > 0\
       ].pop() # pop to trigger error if list empty
-      print " ", self.name
+      print "  Found NED SED data:", self.name
     except:
-      print "  Can't find raw NED SED data! (%s)" % self.name
+      print "  Can't find NED SED data:", self.name
 
   def parse_wise(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     try: # see if 2mass data is included
-      [int(self.wise.array[name].data.item()) for name in ["%s_m_2mass" % letter for letter in ("j", "h", "k")]]  # will error if no 2mass data
+      [int(self.wise.array[name].data.item()) for name in ("%s_m_2mass" % letter for letter in ("j", "h", "k"))]  # will error if no 2mass data
       self.twomass = self.wise # if gets to here then 2mass is included in wise
     except: pass # will try to fetch 2mass later
     try:
@@ -296,13 +292,13 @@ class Source:
        for freq, flux \
        in zip(\
          (8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), \
-         map(float.__mul__, (306.682, 170.663, 29.045, 8.284), [10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)])\
+         map(float.__mul__, (306.682, 170.663, 29.045, 8.284), (10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)))\
         ) \
        if wise_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.name
+      print "  Found WISE data:", self.name
     except:
-      print "  Can't find raw WISE data! (%s)" % self.name
+      print "  Can't find WISE data:", self.name
 
   def parse_twomass(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -323,13 +319,13 @@ class Source:
        for freq, flux \
        in zip(\
          (2.429e14, 1.805e14, 1.390e14), \
-         map(float.__mul__, (1594., 1024., 667.), [10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")])\
+         map(float.__mul__, (1594., 1024., 667.), (10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")))\
         ) \
        if twomass_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
-      print " ", self.name
+      print "  Found 2MASS data:", self.name
     except:
-      print "  Can't find raw 2MASS data! (%s)" % self.name
+      print "  Can't find 2MASS data:", self.name
 
   def parse_galex(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
@@ -378,9 +374,9 @@ class Source:
         except: pass # keep going with the loop
 
       galex_offsets_from_ned.pop() # will error if empty
-      print " ", self.name # successfully found at least some data
+      print "  Found GALEX data:", self.name # successfully found at least some data
     except:
-      print "  Can't find raw GALEX data! (%s)" % self.name
+      print "  Can't find GALEX data:", self.name
 
 def build_input_regexp():
   """Given the input string build a regexp to match against valid lines of data input."""
@@ -425,4 +421,4 @@ def get_votable(url):
       warnings.simplefilter("ignore") # suppress astropy warnings
       return astropy.io.votable.parse_single_table(xml_file) # parse xml to astropy votable
   except:
-    print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % url
+    print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised names or coordinates." % url

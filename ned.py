@@ -56,10 +56,8 @@ print
 print "GETTING AND ANALYSING INPUT DATA..."
 sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] # could be memoized
 print
-print "DOWNLOADING NED POSITION DATA..."
-[setattr(source, "ned_position", source.get_ned_position_votable()) for source in sources] # fetch ned position data
-print "ANALYSING NED POSITION DATA..."
-[source.parse_ned_position() for source in sources] # parse and store ned position data
+print "DOWNLOADING AND ANALYSING NED POSITION DATA..."
+[source.get_and_parse_ned_position() for source in sources] # fetch, parse and store ned position data
 print "DOWNLOADING NED SED DATA..."
 [setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED SED DATA..."
@@ -94,6 +92,7 @@ if plot_dir:
       print "%s PLOT OUTPUT WRITTEN TO %s" % (source.name, plot_file.name)
     except:
       print "COULD NOT WRITE PLOT OUTPUT FOR %s" % source.name
+
 print
 print "FINISHED"
 out_file.close() # close it at end since still need to print to stdout
