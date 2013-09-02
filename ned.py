@@ -41,6 +41,7 @@ valid_output_fields = {\
   "input_lon": float("inf"), \
   "offset_from_ned": float("inf"), \
   "input_offset_from_ned": float("inf"), \
+  "e_bv": float("inf"), \
   "extinction": 1.\
  }
 for input_field in libned.input_fields: # add custom input fields to valid output fields
@@ -63,6 +64,9 @@ print "DOWNLOADING NED SED DATA..."
 [setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED SED DATA..."
 [source.parse_ned_sed(index+1) for index, source in enumerate(sources)] # parse and store ned sed data
+print
+print "DOWNLOADING EXTINCTION DATA..."
+[setattr(source, "dust", source.get_dust_xml()) for source in sources] # fetch extinction data
 print
 print "DOWNLOADING WISE DATA..."
 [setattr(source, "wise", source.get_wise_votable()) for source in sources] # fetch wise data

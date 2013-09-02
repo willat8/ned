@@ -2,7 +2,7 @@
    the Wide-field Infrared Survey Explorer (WISE) database, the Two Micron All Sky Survey (2MASS) database
    and the Galaxy Evolution Explorer (GALEX) database."""
 
-import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy
+import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy, xml.etree.ElementTree
 
 KNOWN_INPUT_FIELDS = {
   "input_lat": "(-?[0-9]+(\.?[0-9]+)?)?",
@@ -18,6 +18,8 @@ NED_POSITION_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-objsearch
 &objname=%s"
 NED_SED_SEARCH_PATH = "http://nedwww.ipac.caltech.edu/cgi-bin/nph-datasearch?search_type=Photometry&of=xml_all\
 &objname=%s"
+DUST_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/DUST/nph-dust?\
+locstr=%(lat).5f+%(lon).5f"
 WISE_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog=wise_allsky_4band_p3as_psd&outfmt=3\
 &objstr=%(lat).5f+%(lon).5f"
 TWOMASS_SEARCH_PATH = "http://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-query?catalog=fp_psc&outfmt=3\
@@ -82,6 +84,7 @@ class Source:
     self.line = line # raw input specifying source
     self.ned_position = None
     self.ned_sed = None
+    self.dust = None
     self.wise = None
     self.twomass = None
     self.galex = None
@@ -89,6 +92,7 @@ class Source:
     self.ned_lat = float("inf")
     self.ned_lon = float("inf")
     self.input_offset_from_ned = float("inf")
+    self.e_bv = float("inf")
 
     print "  Recognised source:", self.name
 
@@ -163,6 +167,22 @@ class Source:
        Depends on NED name or NVSS ID."""
     if self.search_name: # check if ned recognises the provided ned name
       return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.search_name))
+    return
+
+  def get_dust_xml(self):
+    """Builds the correct URL and fetches and parses to xml the source's extinction E(B-V) xml file."""
+    try:
+      int(self.search_lat()) + int(self.search_lon()) # will error if inf or nan
+    except:
+      return # don't try downloading if no coordinates are known
+    try:
+      url = DUST_SEARCH_PATH % {"lat": self.search_lat(), "lon": self.search_lon()}
+      print " ", url
+      xml_file = urllib.urlopen(url) # grab xml file-like-object from the web
+      time.sleep(1) # respect request throttling recommendations
+      return xml.etree.ElementTree.parse(xml_file) # parse xml
+    except:
+      print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised names or coordinates." % url
     return
 
   def get_wise_votable(self):
