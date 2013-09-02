@@ -31,7 +31,8 @@ ORDER BY n.distance ASC, p.fuv_mag ASC, p.nuv_mag ASC, p.e_bv ASC"
 O_M = 0.27 # mass density parameter
 O_Lambda = 0.73 # dark energy density parameter
 H_0 = 71 # hubble constant
-c = 299793 # speed of light
+c = 299793000 # speed of light
+R_V = 3.1 # extinction factor
 
 class DataPoint:
   """A storage class for frequency vs flux data from various sources"""
@@ -106,7 +107,7 @@ class Source:
 
     E = lambda z: math.sqrt(O_M*(1+z)**3 + O_k*(1+z)**2 + O_Lambda)
     I = numpy.trapz([1/x for x in map(E, partition) if x is not 0.], dx=self.z/num_intervals)
-    D_C = c/H_0 * I
+    D_C = (c/1000)/H_0 * I # c in km/s
 
     # assuming a flat universe the transverse comoving distance equals the radial comoving distance
     D_M = D_C
@@ -345,7 +346,7 @@ class Source:
 
       mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux > 0 and not math.isnan(e_bv) and e_bv > 0 # -999 indicates no data
 
-      for freq, flux_name, extinction in zip((1.963e15, 1.321e15), ("fuv_flux", "nuv_flux"), (lambda e_bv: 10**(.4*e_bv*8.24), lambda e_bv: 10**(.4*e_bv*(8.24-e_bv*0.67)))):
+      for freq, flux_name in zip((1.963e15, 1.321e15), ("fuv_flux", "nuv_flux")):
         galex_averages = dict(\
           (key, numpy.mean(value)) \
           for key, value \
@@ -376,7 +377,7 @@ class Source:
               ("lat", galex_averages["lat"]), \
               ("lon", galex_averages["lon"]), \
               ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
-              ("extinction", extinction(galex_averages["e_bv"]))
+              ("extinction", e_bv_to_extinction(galex_averages["e_bv"], freq))
              )
             if not (key == "flag" and not value)\
            })) # don't include flag if not changed from default
@@ -435,5 +436,28 @@ def get_votable(url):
 def e_bv_to_extinction(e_bv, freq):
   """Calculates an extinction given an E(B-V) and a frequency.
      See equations (1) through (4) in http://ads.nao.ac.jp/abs/1989ApJ...345..245C."""
-  wavelength = c/freq
-  #if <= wavelength
+  A_V = e_bv
+  try:
+    int(1/A_V) + int(A_V) # will error if zero, inf or nan
+  except:
+    return 1. # extinction defaults to 1
+  x = (freq/c)/1e6 # wavenumber in inverse micrometres
+  a = 0 # such that extinction will return 1 by default
+  b = 0
+  if 0.3<=x<=1.1: # infrared
+    a = 0.574*x**1.61
+    b = -0.527*x**1.61
+  elif 1.1<=x<=3.3: # optical and near-infrared
+    y = x - 1.82
+    a = 1 + 0.17699*y - 0.50447*y**2 - 0.02427*y**3 + 0.72085*y**4 \
+        + 0.01979*y**5 - 0.77530*y**6 + 0.32999*y**7
+    b = 1.41338*y + 2.28305*y**2 + 1.07233*y**3 - 5.38434*y**4 \
+        - 0.62251*y**5 + 5.30260*y**6 - 2.09002*y**7
+  elif 3.3<=x<=8: # ultraviolet and far-ultraviolet
+    F_a = -0.04473*(x - 5.9)**2 - 0.009779*(x - 5.9)**3 if 8>=x>=5.9 else 0
+    F_b = 0.2130*(x - 5.9)**2 + 0.1207*(x - 5.9)**3 if 8>=x>=5.9 else 0
+    a = 1.752 - 0.316*x - 0.104/((x - 4.67)**2 + 0.341) + F_a
+    b = -3.090 + 1.825*x + 1.206/((x - 4.62)**2 + 0.263) + F_b
+
+  A_lambda = A_V * (a + b/R_V) # R_V is extinction factor
+  return 10**(0.4*A_lambda) # convert from magnitude
