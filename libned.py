@@ -5,10 +5,10 @@
 import urllib, astropy.io.votable, time, warnings, math, mechanize, bs4, re, numpy, xml.etree.ElementTree
 
 KNOWN_INPUT_FIELDS = {
-  "input_lat": "(-?[0-9]+(\.?[0-9]+)?)?",
-  "input_lon": "(-?[0-9]+(\.?[0-9]+)?)?",
+  "input_lat": "(-?[0-9]+(\.[0-9]+)?)?",
+  "input_lon": "(-?[0-9]+(\.[0-9]+)?)?",
   "ned_name": ".*?",
-  "z": "(-?[0-9]+(\.?[0-9]+)?([eE]-?[0-9]+)?)?",
+  "z": "(-?[0-9]+(\.[0-9]+)?([eE]-?[0-9]+)?)?",
   "nvss_id": ".*?"
  } # all should optionally match nothing for the case of empty fields
 input_regexp = None
@@ -83,8 +83,8 @@ class Source:
     self.points = []
     self.line = line # raw input specifying source
     self.ned_position = None
-    self.ned_sed = None
     self.dust = None
+    self.ned_sed = None
     self.wise = None
     self.twomass = None
     self.galex = None
@@ -162,13 +162,6 @@ class Source:
         continue # try again using nvss id
     print "  Can't find NED position:", self.name
 
-  def get_ned_sed_votable(self):
-    """Builds the correct URL and fetches the source's NED SED votable.
-       Depends on NED name or NVSS ID."""
-    if self.search_name: # check if ned recognises the provided ned name
-      return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.search_name))
-    return
-
   def get_dust_xml(self):
     """Builds the correct URL and fetches and parses to xml the source's extinction E(B-V) xml file."""
     try:
@@ -183,6 +176,13 @@ class Source:
       return xml.etree.ElementTree.parse(xml_file) # parse xml
     except:
       print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised names or coordinates." % url
+    return
+
+  def get_ned_sed_votable(self):
+    """Builds the correct URL and fetches the source's NED SED votable.
+       Depends on NED name or NVSS ID."""
+    if self.search_name: # check if ned recognises the provided ned name
+      return get_votable(NED_SED_SEARCH_PATH % urllib.quote_plus(self.search_name))
     return
 
   def get_wise_votable(self):
@@ -229,6 +229,15 @@ class Source:
     except:
       print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised NED names." % GALEX_SEARCH_PAGE
 
+  def parse_dust(self):
+    """Picks out the E(B-V) reddening value and records it."""
+    try:
+      e_bv_result_node = filter(lambda node: node.find("desc").text.strip() == "E(B-V) Reddening", self.dust.findall("./result[desc]"))[0]
+      self.e_bv = float(re.compile("^(?P<e_bv>[0-9]+(\.[0-9]+)?)\s*\(mag\)$", re.IGNORECASE).match(e_bv_result_node.find("statistics/meanValue").text.strip()).groupdict()["e_bv"])
+      print "  Found extinction data:", self.name
+    except:
+      print "  Can't find extinction data:", self.name
+
   def parse_ned_sed(self, index):
     """Picks out the frequency vs flux data and records them as data points."""
     all_fields_filter_regexp = re.compile(""" # for finding not allowed patterns in all fields of ned sed output
@@ -250,7 +259,8 @@ class Source:
          "data_source": "NED", \
          "lat": self.ned_lat, \
          "lon": self.ned_lon, \
-         "offset_from_ned": 0.\
+         "offset_from_ned": 0., \
+         "extinction": e_bv_to_extinction(self.e_bv, freq)\
         })) \
        for freq, flux, line, passband \
        in zip(\
@@ -317,7 +327,8 @@ class Source:
          "data_source": "WISE", \
          "lat": wise_lat, \
          "lon": wise_lon, \
-         "offset_from_ned": wise_offset\
+         "offset_from_ned": wise_offset, \
+         "extinction": e_bv_to_extinction(self.e_bv, freq)\
         })) \
        for freq, flux \
        in zip(\
@@ -344,7 +355,8 @@ class Source:
          "data_source": "2MASS", \
          "lat": twomass_lat, \
          "lon": twomass_lon, \
-         "offset_from_ned": twomass_offset\
+         "offset_from_ned": twomass_offset, \
+         "extinction": e_bv_to_extinction(self.e_bv, freq)\
         })) \
        for freq, flux \
        in zip(\

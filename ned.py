@@ -60,13 +60,16 @@ sources = [libned.Source(line) for line in in_file if libned.parse_line(line)] #
 print
 print "DOWNLOADING AND ANALYSING NED POSITION DATA..."
 [source.get_and_parse_ned_position() for source in sources] # fetch, parse and store ned position data
+print
+print "DOWNLOADING EXTINCTION DATA..."
+[setattr(source, "dust", source.get_dust_xml()) for source in sources] # fetch extinction data
+print "ANALYSING EXTINCTION DATA..."
+[source.parse_dust() for source in sources] # parse and store dust data
+print
 print "DOWNLOADING NED SED DATA..."
 [setattr(source, "ned_sed", source.get_ned_sed_votable()) for source in sources] # fetch ned sed data
 print "ANALYSING NED SED DATA..."
 [source.parse_ned_sed(index+1) for index, source in enumerate(sources)] # parse and store ned sed data
-print
-print "DOWNLOADING EXTINCTION DATA..."
-[setattr(source, "dust", source.get_dust_xml()) for source in sources] # fetch extinction data
 print
 print "DOWNLOADING WISE DATA..."
 [setattr(source, "wise", source.get_wise_votable()) for source in sources] # fetch wise data
