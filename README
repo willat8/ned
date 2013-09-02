@@ -32,9 +32,9 @@ If an output filename is specified:
  $ ./ned.py --file out.dat data.dat
 then results will be written to that file. Otherwise results are displayed.
 
-To output a single dat file per input source in plot-ready format use:
+To output a single .dat file per input source in plot-ready format use:
  $ ./ned.py --plot dirname data.dat
-where dirname is the output directory for the dat files. The output format is:
+where dirname is the output directory for the .dat files. The output format is:
 <rest-frame freq> <NED luminosity> <WISE luminosity> <2MASS luminosity> <GALEX luminosity>
 with luminosities in W/Hz.
 
