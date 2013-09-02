@@ -63,6 +63,22 @@ class Source:
   tolerance = 10. # global 10 arcsecond position offset tolerance
 
   def __init__(self, line):
+    # common for all data points for this source, can be overwritten by user-specified fields
+    self.ned_name = None
+    self.nvss_id = None
+    self.z = float("inf")
+    self.ned_lat = float("inf")
+    self.ned_lon = float("inf")
+    self.input_lat = float("inf")
+    self.input_lon = float("inf")
+
+    [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
+    self.input_lat = float(self.input_lat) # fix up types
+    self.input_lon = float(self.input_lon) # fix up types
+    self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
+    self.z = float(self.z) # fix up types
+
+    # common for all data points for this source, will overwrite any clashing user-specified fields
     self.points = []
     self.line = line # raw input specifying source
     self.ned_position = None
@@ -71,23 +87,8 @@ class Source:
     self.twomass = None
     self.galex = None
     self.search_name = None
-
-    # common for all data points for this source
-    self.name = None
-    self.ned_name = None
-    self.nvss_id = None
-    self.z = float("inf")
-    self.ned_lat = float("inf")
-    self.ned_lon = float("inf")
-    self.input_lat = float("inf")
-    self.input_lon = float("inf")
     self.input_offset_from_ned = float("inf")
 
-    [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
-    self.input_lat = float(self.input_lat) # fix up types
-    self.input_lon = float(self.input_lon) # fix up types
-    self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
-    self.z = float(self.z) # fix up types
     print "  Recognised source:", self.name
 
   def __repr__(self):
