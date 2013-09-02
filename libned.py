@@ -431,3 +431,9 @@ def get_votable(url):
       return astropy.io.votable.parse_single_table(xml_file) # parse xml to astropy votable
   except:
     print "  Could not download or interpret data from %s. You may not be connected to the Internet or the input data contains unrecognised names or coordinates." % url
+
+def e_bv_to_extinction(e_bv, freq):
+  """Calculates an extinction given an E(B-V) and a frequency.
+     See equations (1) through (4) in http://ads.nao.ac.jp/abs/1989ApJ...345..245C."""
+  wavelength = c/freq
+  #if <= wavelength
