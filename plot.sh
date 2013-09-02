@@ -45,7 +45,7 @@ gnuplot <<EOF
   set ylabel "Luminosity, log_{10}(L_{/Symbol-Oblique n}) [W Hz^{-1}]"
   set arrow from lower_cutoff,graph 0 to lower_cutoff,graph 1 nohead linetype 0 # vertical dashed line at lower cutoff freq
   set arrow from upper_cutoff,graph 0 to upper_cutoff,graph 1 nohead linetype 0 # vertical dashed line at upper cutoff freq
-  set label gprintf("Ionising photon rate: %.1f", ion_rate) at graph 0.1,0.1
+  set label gprintf("Ionising photon rate: %.2f", ion_rate) at graph 0.1,0.1
 
   plot 10**f(log10((lower_cutoff<x && x<upper_cutoff) ? x : 1/0)) title "UV fit", for [col=2:5] "$in_file" using 1:col # plot fit in between cutoffs only
 EOF
