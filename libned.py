@@ -67,8 +67,6 @@ class Source:
     self.ned_name = None
     self.nvss_id = None
     self.z = float("inf")
-    self.ned_lat = float("inf")
-    self.ned_lon = float("inf")
     self.input_lat = float("inf")
     self.input_lon = float("inf")
 
@@ -87,6 +85,8 @@ class Source:
     self.twomass = None
     self.galex = None
     self.search_name = None
+    self.ned_lat = float("inf")
+    self.ned_lon = float("inf")
     self.input_offset_from_ned = float("inf")
 
     print "  Recognised source:", self.name

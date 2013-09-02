@@ -1,4 +1,6 @@
-Requirements:
+****************
+* Requirements *
+****************
   + Python 2.7 release series (http://www.python.org/download/releases/)
   + NumPy (http://www.numpy.org/)
   + Astropy (http://www.astropy.org/)
@@ -10,19 +12,18 @@ If you have pip installed then run:
  $ sudo pip install numpy astropy mechanize beautifulsoup4
 to install all of the dependencies.
 
-Usage:
+*********
+* Usage *
+*********
+Firstly set the executable bit:
  $ chmod +x ned.py
+
+The script can be invoked on the command-line:
  $ ./ned.py data.dat
-where data.dat is a newline-separated list of custom input data (with format specified in ned.conf).
-Sample dat files are provided.
+where data.dat is a newline-separated file of whitespace-separated custom input data (see Configuration).
+Sample input data files are provided.
 
-The output format can be specified in the ned.conf configuration file.
-The syntax is a normal python format string. See ned.conf for the available data fields.
-
-The input format can also be specified in ned.conf.
-The syntax is a space separated sequence of field names. See ned.conf for automatically recognised field names.
-
-Note that running the script without any file input:
+Running the script without any file input:
  $ ./ned.py
 will wait for manual data input. To indicate the end of a line of entry hit Return and then Ctrl+D.
 To indicate the end of input hit Ctrl+D again.
@@ -34,7 +35,16 @@ then results will be written to that file. Otherwise results are displayed.
 To output a single dat file per input source in plot-ready format use:
  $ ./ned.py --plot dirname data.dat
 where dirname is the output directory for the dat files. The output format is:
-<rest-frame freq> <NED luminosity in W/Hz> <WISE luminosity in W/Hz> <2MASS luminosity in W/Hz> <GALEX luminosity in W/Hz>
+<rest-frame freq> <NED luminosity> <WISE luminosity> <2MASS luminosity> <GALEX luminosity>
+with luminosities in W/Hz.
 
-For more information refer to:
+For quick-reference refer to:
  $ ./ned.py --help
+
+*****************
+* Configuration *
+*****************
+The input format can be specified as a space-separated sequence of field names.
+The output format can be specified as a Python format string.
+
+See ned.conf for details.
