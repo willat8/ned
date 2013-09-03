@@ -318,7 +318,7 @@ class Source:
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
-      wise_offset = math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600
+      wise_offset = math.hypot(self.search_lat()-wise_lat, self.search_lon()-wise_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
          "num": len(self.points)+1, \
@@ -346,7 +346,7 @@ class Source:
     try:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
-      twomass_offset = math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600
+      twomass_offset = math.hypot(self.search_lat()-twomass_lat, self.search_lon()-twomass_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
          "num": len(self.points)+1, \
@@ -374,7 +374,7 @@ class Source:
     try:
       galex_lats = map(float, self.galex.array["ra"].data.tolist())
       galex_lons = map(float, self.galex.array["dec"].data.tolist())
-      galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.ned_lat-lat for lat in galex_lats), (self.ned_lon-lon for lon in galex_lons))]
+      galex_offsets_from_ned = [offset*3600 for offset in map(math.hypot, (self.search_lat()-lat for lat in galex_lats), (self.search_lon()-lon for lon in galex_lons))]
 
       mean_filter = lambda (lat, lon, offset, flux, e_bv): offset <= self.tolerance and not math.isnan(flux) and flux > 0 and not math.isnan(e_bv) and e_bv > 0 # -999 indicates no data
 
@@ -408,7 +408,7 @@ class Source:
               ("flag", 'm'*(not not len(galex_offsets_from_ned) > 1)), \
               ("lat", galex_averages["lat"]), \
               ("lon", galex_averages["lon"]), \
-              ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
+              ("offset_from_ned", math.hypot(self.search_lat()-galex_averages["lat"], self.search_lon()-galex_averages["lon"])*3600), \
               ("extinction", e_bv_to_extinction(galex_averages["e_bv"], freq))
              )
             if not (key == "flag" and not value)\
