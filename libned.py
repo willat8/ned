@@ -318,7 +318,7 @@ class Source:
     try:
       wise_lat = float(self.wise.array["ra"].data.item())
       wise_lon = float(self.wise.array["dec"].data.item())
-      wise_offset = math.hypot(self.search_lat()-wise_lat, self.search_lon()-wise_lon)*3600
+      wise_offset = math.hypot(self.ned_lat-wise_lat, self.ned_lon-wise_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
          "num": len(self.points)+1, \
@@ -335,7 +335,7 @@ class Source:
          (8.856e+13, 6.445e+13, 2.675e+13, 1.346e+13), \
          map(float.__mul__, (306.682, 170.663, 29.045, 8.284), (10**(-.4*float(self.wise.array["w%dmpro" % number].data.item())) for number in range(1,5)))\
         ) \
-       if wise_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
+       if math.hypot(self.search_lat()-wise_lat, self.search_lon()-wise_lon)*3600 <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
       print "  Found WISE data:", self.name
     except:
@@ -346,7 +346,7 @@ class Source:
     try:
       twomass_lat = float(self.twomass.array["ra"].data.item())
       twomass_lon = float(self.twomass.array["dec"].data.item())
-      twomass_offset = math.hypot(self.search_lat()-twomass_lat, self.search_lon()-twomass_lon)*3600
+      twomass_offset = math.hypot(self.ned_lat-twomass_lat, self.ned_lon-twomass_lon)*3600
       [self.points.append(DataPoint(self, {\
          "index": index, \
          "num": len(self.points)+1, \
@@ -363,7 +363,7 @@ class Source:
          (2.429e14, 1.805e14, 1.390e14), \
          map(float.__mul__, (1594., 1024., 667.), (10**(-.4*float(self.twomass.array["%c_m" % letter + "_2mass"*(self.twomass==self.wise)].data.item())) for letter in ("j", "h", "k")))\
         ) \
-       if twomass_offset <= self.tolerance and not math.isnan(flux) and flux > 0\
+       if math.hypot(self.search_lat()-twomass_lat, self.search_lon()-twomass_lon)*3600 <= self.tolerance and not math.isnan(flux) and flux > 0\
       ]
       print "  Found 2MASS data:", self.name
     except:
@@ -408,7 +408,7 @@ class Source:
               ("flag", 'm'*(not not len(galex_offsets_from_ned) > 1)), \
               ("lat", galex_averages["lat"]), \
               ("lon", galex_averages["lon"]), \
-              ("offset_from_ned", math.hypot(self.search_lat()-galex_averages["lat"], self.search_lon()-galex_averages["lon"])*3600), \
+              ("offset_from_ned", math.hypot(self.ned_lat-galex_averages["lat"], self.ned_lon-galex_averages["lon"])*3600), \
               ("extinction", e_bv_to_extinction(galex_averages["e_bv"], freq))
              )
             if not (key == "flag" and not value)\
