@@ -74,6 +74,7 @@ class Source:
     self.input_lon = float("inf")
 
     [setattr(self, *entry) for entry in parse_line(line).items()] # set provided values
+    [setattr(self, input_field, "") for input_field in input_fields if not hasattr(self, input_field)] # set unspecified input strings to the empty string
     self.input_lat = float(self.input_lat) # fix up types
     self.input_lon = float(self.input_lon) # fix up types
     self.name = self.ned_name if self.ned_name else (self.nvss_id if self.nvss_id else "%.5f_%.5f" % (self.input_lat, self.input_lon)) # set a unique name
@@ -125,7 +126,7 @@ class Source:
     # now we generate the plot output
     luminosity = lambda flux, extinction: 4*3.14159*(d_l**2)*flux*extinction*1e-26/(1+self.z)
     format_strings = {"NED": "%.5e 0 0 0", "WISE": "0 %.5e 0 0", "2MASS": "0 0 %.5e 0", "GALEX": "0 0 0 %.5e"}
-    return "freq NED WISE 2MASS GALEX\n" + "\n".join("%.5e " % ((1+self.z)*point.freq) + format_strings[point.source] % luminosity(point.flux, point.extinction) for point in self.points)
+    return "freq NED WISE 2MASS GALEX\n" + "\n".join("%.5e " % ((1+self.z)*point.freq) + format_strings[point.data_source] % luminosity(point.flux, point.extinction) for point in self.points)
 
   def search_lat(self):
     """Returns the NED latitude if it exists, otherwise returns the input-provided latitude."""
