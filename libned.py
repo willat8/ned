@@ -124,7 +124,7 @@ class Source:
     d_l = 3.086e22*D_L
 
     # now we generate the plot output
-    luminosity = lambda flux, extinction: 4*3.14159*(d_l**2)*flux*extinction*1e-26/(1+self.z)
+    luminosity = lambda flux, extinction: 4*math.pi*(d_l**2)*flux*extinction*1e-26/(1+self.z)
     format_strings = {"NED": "%.5e 0 0 0", "WISE": "0 %.5e 0 0", "2MASS": "0 0 %.5e 0", "GALEX": "0 0 0 %.5e"}
     return "freq NED WISE 2MASS GALEX\n" + "\n".join("%.5e " % ((1+self.z)*point.freq) + format_strings[point.data_source] % luminosity(point.flux, point.extinction) for point in self.points)
 
