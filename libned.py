@@ -234,7 +234,7 @@ class Source:
     """Picks out the E(B-V) reddening value and records it."""
     try:
       e_bv_result_node = filter(lambda node: node.find("desc").text.strip() == "E(B-V) Reddening", self.dust.findall("./result[desc]"))[0]
-      self.e_bv = float(re.compile("^(?P<e_bv>[0-9]+(\.[0-9]+)?)\s*\(mag\)$", re.IGNORECASE).match(e_bv_result_node.find("statistics/meanValue").text.strip()).groupdict()["e_bv"])
+      self.e_bv = float(re.compile("^(?P<e_bv>[0-9]+(\.[0-9]+)?)\s*\(mag\)$", re.IGNORECASE).match(e_bv_result_node.find("statistics/meanValueSandF").text.strip()).groupdict()["e_bv"])
       print "  Found extinction data:", self.name
     except:
       print "  Can't find extinction data:", self.name
