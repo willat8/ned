@@ -276,7 +276,7 @@ class Source:
            re.search("(^|\s)\(SDSS\\b(?!\s+PSF\)(\s|$)) # in passband matches anything (including nothing) except for psf after sdss", passband, re.VERBOSE | re.IGNORECASE) \
            if re.search("(^|\s)\(SDSS\\b # in passband matches sdss at start of field or after whitespace", passband, re.VERBOSE | re.IGNORECASE) \
            else not re.search(""" # search passband for various not allowed patterns
-             \\b(
+             (
              _K20
              |
              _14arcsec
@@ -298,7 +298,7 @@ class Source:
              UKIRT
              |
              GALEX
-             )\\b
+             )
              """, passband, re.VERBOSE | re.IGNORECASE)\
           ) \
          and not math.isnan(flux) \
