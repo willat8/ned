@@ -246,8 +246,6 @@ class Source:
       |
       ^1983ApJ\.\.\.272\.\.400H\\b # this ref code only at start of field
       |
-      \\bmodel # word or prefix model anywhere in field
-      |
       \\bcount\s+statistics\\b # phrase count statistics anywhere in field
       """, re.VERBOSE | re.IGNORECASE)
 
